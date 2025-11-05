@@ -1,0 +1,240 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Dictado palabra por palabra</title>
+  <style>
+    :root {
+      color-scheme: light dark;
+      font-family: "Inter", "Helvetica Neue", Arial, sans-serif;
+      --bg: #0f0f10;
+      --fg: #f5f5f5;
+      --accent: #4c74ff;
+    }
+
+    @media (prefers-color-scheme: light) {
+      :root {
+        --bg: #f7f7f7;
+        --fg: #111;
+        --accent: #3559ff;
+      }
+    }
+
+    body {
+      margin: 0;
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: space-between;
+      padding: 3rem 1.5rem 2.5rem;
+      background: var(--bg);
+      color: var(--fg);
+      transition: background 0.3s ease, color 0.3s ease;
+    }
+
+    header {
+      width: 100%;
+      text-align: center;
+    }
+
+    h1 {
+      font-size: clamp(1.6rem, 4vw, 2.3rem);
+      font-weight: 600;
+      margin: 0;
+      letter-spacing: 0.02em;
+    }
+
+    p {
+      margin: 0.75rem auto 0;
+      max-width: 28rem;
+      opacity: 0.7;
+      font-size: 0.95rem;
+      line-height: 1.6;
+    }
+
+    main {
+      width: min(32rem, 100%);
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 1.5rem;
+    }
+
+    .mic-button {
+      width: 120px;
+      height: 120px;
+      border-radius: 32px;
+      border: none;
+      background: rgba(76, 116, 255, 0.12);
+      color: var(--accent);
+      display: grid;
+      place-items: center;
+      cursor: pointer;
+      transition: transform 0.25s ease, background 0.25s ease;
+      box-shadow: 0 18px 40px -24px var(--accent);
+    }
+
+    .mic-button.active {
+      background: var(--accent);
+      color: var(--bg);
+      transform: scale(0.96);
+      box-shadow: 0 18px 48px -18px rgba(76, 116, 255, 0.65);
+    }
+
+    .mic-button:active {
+      transform: scale(0.94);
+    }
+
+    .mic-icon {
+      width: 42px;
+      height: 42px;
+    }
+
+    .words {
+      width: 100%;
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.65rem;
+      justify-content: center;
+    }
+
+    .word {
+      padding: 0.45rem 0.9rem;
+      border-radius: 999px;
+      border: 1px solid rgba(245, 245, 245, 0.18);
+      background: rgba(245, 245, 245, 0.08);
+      color: inherit;
+      font-size: 0.9rem;
+      letter-spacing: 0.01em;
+      backdrop-filter: blur(12px);
+    }
+
+    .word:nth-child(odd) {
+      border-color: rgba(76, 116, 255, 0.35);
+      background: rgba(76, 116, 255, 0.12);
+      color: var(--accent);
+    }
+
+    footer {
+      width: 100%;
+      text-align: center;
+      font-size: 0.78rem;
+      opacity: 0.55;
+    }
+
+    .status {
+      min-height: 1.2rem;
+      font-size: 0.85rem;
+      opacity: 0.75;
+      text-align: center;
+    }
+
+    .hidden {
+      display: none;
+    }
+  </style>
+</head>
+<body>
+  <header>
+    <h1>Dictado palabra por palabra</h1>
+    <p>Pulsa el micrófono y habla con claridad. Cada palabra aparecerá al instante, lista para copiar o revisar.</p>
+  </header>
+
+  <main>
+    <button class="mic-button" id="micButton" type="button" aria-pressed="false">
+      <svg class="mic-icon" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+        <path d="M12 15a3 3 0 0 0 3-3V6a3 3 0 0 0-6 0v6a3 3 0 0 0 3 3z"></path>
+        <path d="M5 11a1 1 0 0 0-2 0 9 9 0 0 0 8 8.94V22a1 1 0 0 0 2 0v-2.06A9 9 0 0 0 21 11a1 1 0 0 0-2 0 7 7 0 0 1-14 0z"></path>
+      </svg>
+    </button>
+    <div class="status" id="status"></div>
+    <div class="words" id="words" role="list" aria-live="polite" aria-label="Palabras reconocidas"></div>
+  </main>
+
+  <footer>
+    Funciona con la API de reconocimiento de voz del navegador.
+  </footer>
+
+  <script>
+    const micButton = document.getElementById('micButton');
+    const wordsContainer = document.getElementById('words');
+    const statusText = document.getElementById('status');
+
+    const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+    let recognition;
+    let listening = false;
+
+    if (!SpeechRecognition) {
+      statusText.textContent = 'Tu navegador no soporta reconocimiento de voz.';
+      micButton.disabled = true;
+      micButton.classList.add('hidden');
+    } else {
+      recognition = new SpeechRecognition();
+      recognition.lang = 'es-ES';
+      recognition.interimResults = true;
+      recognition.continuous = true;
+
+      recognition.addEventListener('result', (event) => {
+        const { results } = event;
+        const latest = results[results.length - 1];
+        const transcript = latest[0].transcript.trim();
+        if (!transcript) return;
+        const clean = transcript
+          .normalize('NFD')
+          .replace(/[\u0300-\u036f]/g, '')
+          .replace(/[.,;:!?¡¿"'()\[\]{}]/g, '');
+
+        const words = clean.split(/\s+/).filter(Boolean);
+        if (!latest.isFinal) {
+          statusText.textContent = words.join(' ');
+          return;
+        }
+
+        statusText.textContent = '';
+        words.forEach((word) => {
+          const span = document.createElement('span');
+          span.className = 'word';
+          span.textContent = word;
+          wordsContainer.appendChild(span);
+        });
+        wordsContainer.scrollTo({ left: 0, top: wordsContainer.scrollHeight, behavior: 'smooth' });
+      });
+
+      recognition.addEventListener('start', () => {
+        listening = true;
+        micButton.classList.add('active');
+        micButton.setAttribute('aria-pressed', 'true');
+        statusText.textContent = 'Escuchando…';
+      });
+
+      recognition.addEventListener('end', () => {
+        listening = false;
+        micButton.classList.remove('active');
+        micButton.setAttribute('aria-pressed', 'false');
+        statusText.textContent = 'Pausa';
+      });
+
+      recognition.addEventListener('error', (event) => {
+        statusText.textContent = `Error: ${event.error}`;
+      });
+    }
+
+    micButton.addEventListener('click', () => {
+      if (!recognition) return;
+      if (listening) {
+        recognition.stop();
+      } else {
+        try {
+          recognition.start();
+        } catch (error) {
+          statusText.textContent = 'Reinicia el dictado para continuar.';
+        }
+      }
+    });
+  </script>
+</body>
+</html>
