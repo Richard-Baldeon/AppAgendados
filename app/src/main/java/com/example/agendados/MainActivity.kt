@@ -1,6 +1,7 @@
 package com.example.agendados
 
 import android.Manifest
+import android.app.PendingIntent
 import android.content.Intent
 import android.content.pm.PackageManager
 import android.net.Uri
@@ -96,9 +97,19 @@ class MainActivity : ComponentActivity() {
             addFlags(Intent.FLAG_ACTIVITY_REORDER_TO_FRONT)
             addFlags(Intent.FLAG_ACTIVITY_SINGLE_TOP)
         }
+        val pendingIntent = PendingIntent.getActivity(
+            this,
+            0,
+            resumeIntent,
+            PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
+        )
         Handler(Looper.getMainLooper()).postDelayed({
-            startActivity(resumeIntent)
-        }, 300)
+            try {
+                pendingIntent.send()
+            } catch (ignored: PendingIntent.CanceledException) {
+                // Nothing to do if the intent is no longer valid.
+            }
+        }, 1000)
     }
 }
 
