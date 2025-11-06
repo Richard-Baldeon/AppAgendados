@@ -3,7 +3,8 @@ package com.example.agendados.alarm
 import android.content.BroadcastReceiver
 import android.content.Context
 import android.content.Intent
-import android.os.Build
+import android.os.PowerManager
+import androidx.core.content.ContextCompat
 import com.example.agendados.AlarmActivity
 
 class AlarmReceiver : BroadcastReceiver() {
@@ -15,16 +16,21 @@ class AlarmReceiver : BroadcastReceiver() {
         val phoneNumber = intent.getStringExtra(EXTRA_PHONE_NUMBER) ?: ""
         val payload = AlarmPayload(contactName, amount, phoneNumber)
 
+        val wakeLock = ContextCompat.getSystemService(appContext, PowerManager::class.java)
+            ?.newWakeLock(
+                PowerManager.PARTIAL_WAKE_LOCK,
+                "${appContext.packageName}:AlarmWakeLock"
+            )
+        wakeLock?.acquire(60_000L)
+
         AlarmNotifications.showAlarmNotification(appContext, payload)
 
-        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.Q) {
-            val launchIntent = Intent(appContext, AlarmActivity::class.java).apply {
-                addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP or Intent.FLAG_ACTIVITY_SINGLE_TOP)
-                putExtra(EXTRA_CONTACT_NAME, contactName)
-                putExtra(EXTRA_AMOUNT, amount)
-                putExtra(EXTRA_PHONE_NUMBER, phoneNumber)
-            }
-            appContext.startActivity(launchIntent)
+        val launchIntent = Intent(appContext, AlarmActivity::class.java).apply {
+            addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP or Intent.FLAG_ACTIVITY_SINGLE_TOP)
+            putExtra(EXTRA_CONTACT_NAME, contactName)
+            putExtra(EXTRA_AMOUNT, amount)
+            putExtra(EXTRA_PHONE_NUMBER, phoneNumber)
         }
+        ContextCompat.startActivity(appContext, launchIntent, null)
     }
 }
