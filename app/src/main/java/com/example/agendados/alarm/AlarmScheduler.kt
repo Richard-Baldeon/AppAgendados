@@ -44,6 +44,7 @@ object AlarmScheduler {
         )
         val alarmClockInfo = AlarmManager.AlarmClockInfo(triggerAtMillis, showIntent)
         alarmManager.setAlarmClock(alarmClockInfo, pendingIntent)
+        alarmManager.setExactAndAllowWhileIdle(AlarmManager.RTC_WAKEUP, triggerAtMillis, pendingIntent)
     }
 
     fun cancelAlarm(context: Context, payload: AlarmPayload) {

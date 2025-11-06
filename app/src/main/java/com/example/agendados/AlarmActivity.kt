@@ -12,6 +12,7 @@ import android.view.WindowManager
 import android.widget.Toast
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
+import com.example.agendados.alarm.AlarmNotifications
 import com.example.agendados.alarm.AlarmPayload
 import com.example.agendados.alarm.AlarmScheduler
 import com.example.agendados.alarm.AlarmStorage
@@ -38,6 +39,7 @@ class AlarmActivity : ComponentActivity() {
         val phoneNumber = intent.getStringExtra(EXTRA_PHONE_NUMBER) ?: ""
         val payload = AlarmPayload(contactName, amount, phoneNumber)
 
+        AlarmNotifications.cancelAlarmNotification(this)
         startAlarmSound()
 
         setContent {
@@ -61,6 +63,7 @@ class AlarmActivity : ComponentActivity() {
     }
 
     override fun onDestroy() {
+        AlarmNotifications.cancelAlarmNotification(this)
         stopAlarmSound()
         super.onDestroy()
     }
@@ -68,6 +71,7 @@ class AlarmActivity : ComponentActivity() {
     private fun scheduleSnooze(payload: AlarmPayload) {
         val triggerAt = System.currentTimeMillis() + TimeUnit.MINUTES.toMillis(SNOOZE_MINUTES)
         stopAlarmSound()
+        AlarmNotifications.cancelAlarmNotification(this)
         AlarmScheduler.scheduleExactAlarm(this, triggerAt, payload)
         AlarmStorage.saveAlarmTime(this, triggerAt)
         Toast.makeText(this, R.string.snooze_confirmation, Toast.LENGTH_SHORT).show()
@@ -76,6 +80,7 @@ class AlarmActivity : ComponentActivity() {
 
     private fun dismissAlarm(payload: AlarmPayload) {
         stopAlarmSound()
+        AlarmNotifications.cancelAlarmNotification(this)
         AlarmScheduler.cancelAlarm(this, payload)
         AlarmStorage.clearAlarmTime(this)
         Toast.makeText(this, R.string.alarm_dismissed, Toast.LENGTH_SHORT).show()
@@ -86,6 +91,7 @@ class AlarmActivity : ComponentActivity() {
         AlarmScheduler.cancelAlarm(this, payload)
         AlarmStorage.clearAlarmTime(this)
         stopAlarmSound()
+        AlarmNotifications.cancelAlarmNotification(this)
         val mainIntent = Intent(this, MainActivity::class.java).apply {
             addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP or Intent.FLAG_ACTIVITY_SINGLE_TOP)
             putExtra(MainActivity.EXTRA_TRIGGER_CALL, true)

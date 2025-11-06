@@ -28,4 +28,9 @@
     <string name="dismiss_button">Descartar</string>
     <string name="snooze_confirmation">Alarma pospuesta 10 minutos.</string>
     <string name="alarm_dismissed">Alarma descartada.</string>
+    <string name="alarm_notification_channel_name">Alarmas de Agendados</string>
+    <string name="alarm_notification_channel_description">Avisos de alarma programados</string>
+    <string name="alarm_notification_title">Alarma: %1$s</string>
+    <string name="alarm_notification_body">Monto: %1$s</string>
+    <string name="notification_permission_required">Activa las notificaciones para recibir las alarmas.</string>
 </resources>

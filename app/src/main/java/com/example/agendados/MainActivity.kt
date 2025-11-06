@@ -2,7 +2,6 @@ package com.example.agendados
 
 import android.Manifest
 import android.app.AlarmManager
-import android.app.PendingIntent
 import android.app.TimePickerDialog
 import android.content.Intent
 import android.content.pm.PackageManager
@@ -70,8 +69,24 @@ class MainActivity : ComponentActivity() {
             }
         }
 
+    private val notificationPermissionLauncher =
+        registerForActivityResult(ActivityResultContracts.RequestPermission()) { isGranted ->
+            if (!isGranted) {
+                Toast.makeText(
+                    this,
+                    R.string.notification_permission_required,
+                    Toast.LENGTH_SHORT
+                ).show()
+            }
+        }
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU &&
+            ContextCompat.checkSelfPermission(this, Manifest.permission.POST_NOTIFICATIONS) != PackageManager.PERMISSION_GRANTED
+        ) {
+            notificationPermissionLauncher.launch(Manifest.permission.POST_NOTIFICATIONS)
+        }
         fichaState.value = fichaState.value.copy(
             scheduledTimeMillis = AlarmStorage.getAlarmTime(this)
         )
@@ -229,23 +244,14 @@ class MainActivity : ComponentActivity() {
     }
 
     private fun keepAppInForeground() {
-        val resumeIntent = Intent(this, MainActivity::class.java).apply {
-            addFlags(Intent.FLAG_ACTIVITY_REORDER_TO_FRONT)
-            addFlags(Intent.FLAG_ACTIVITY_SINGLE_TOP)
-        }
-        val pendingIntent = PendingIntent.getActivity(
-            this,
-            0,
-            resumeIntent,
-            PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
-        )
         Handler(Looper.getMainLooper()).postDelayed({
-            try {
-                pendingIntent.send()
-            } catch (ignored: PendingIntent.CanceledException) {
-                // Nothing to do if the intent is no longer valid.
+            val resumeIntent = Intent(this, MainActivity::class.java).apply {
+                addFlags(Intent.FLAG_ACTIVITY_REORDER_TO_FRONT)
+                addFlags(Intent.FLAG_ACTIVITY_SINGLE_TOP)
+                addFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP)
             }
-        }, 1000)
+            startActivity(resumeIntent)
+        }, 500)
     }
 
     private fun getAppVersionName(): String {
