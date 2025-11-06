@@ -5,6 +5,8 @@ import android.content.Intent
 import android.content.pm.PackageManager
 import android.net.Uri
 import android.os.Bundle
+import android.os.Handler
+import android.os.Looper
 import android.widget.Toast
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
@@ -86,6 +88,17 @@ class MainActivity : ComponentActivity() {
             data = Uri.parse("tel:$phoneNumber")
         }
         startActivity(intent)
+        keepAppInForeground()
+    }
+
+    private fun keepAppInForeground() {
+        val resumeIntent = Intent(this, MainActivity::class.java).apply {
+            addFlags(Intent.FLAG_ACTIVITY_REORDER_TO_FRONT)
+            addFlags(Intent.FLAG_ACTIVITY_SINGLE_TOP)
+        }
+        Handler(Looper.getMainLooper()).postDelayed({
+            startActivity(resumeIntent)
+        }, 300)
     }
 }
 
