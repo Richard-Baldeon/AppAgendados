@@ -3,4 +3,5 @@
     <string name="call_button">Llamar</string>
     <string name="phone_number">934540429</string>
     <string name="call_permission_required">Se necesita permiso para llamar.</string>
+    <string name="version_label">Versión %1$s</string>
 </resources>

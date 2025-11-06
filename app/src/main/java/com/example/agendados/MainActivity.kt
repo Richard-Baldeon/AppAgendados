@@ -13,6 +13,7 @@ import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
@@ -27,6 +28,7 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.core.content.ContextCompat
+import com.example.agendados.BuildConfig
 import com.example.agendados.ui.theme.AgendadosTheme
 
 class MainActivity : ComponentActivity() {
@@ -119,21 +121,32 @@ fun FichaScreen(
     onCallClick: () -> Unit,
     modifier: Modifier = Modifier
 ) {
-    Column(
+    Box(
         modifier = modifier
             .fillMaxSize()
-            .padding(24.dp),
-        verticalArrangement = Arrangement.Center,
-        horizontalAlignment = Alignment.CenterHorizontally
+            .padding(24.dp)
     ) {
-        Text(
-            text = phoneNumber,
-            style = MaterialTheme.typography.headlineLarge,
-            textAlign = TextAlign.Center,
-            modifier = Modifier.padding(bottom = 32.dp)
-        )
-        Button(onClick = onCallClick) {
-            Text(text = stringResource(id = R.string.call_button))
+        Column(
+            modifier = Modifier.align(Alignment.Center),
+            verticalArrangement = Arrangement.Center,
+            horizontalAlignment = Alignment.CenterHorizontally
+        ) {
+            Text(
+                text = phoneNumber,
+                style = MaterialTheme.typography.headlineLarge,
+                textAlign = TextAlign.Center,
+                modifier = Modifier.padding(bottom = 32.dp)
+            )
+            Button(onClick = onCallClick) {
+                Text(text = stringResource(id = R.string.call_button))
+            }
         }
+
+        Text(
+            text = stringResource(id = R.string.version_label, BuildConfig.VERSION_NAME),
+            style = MaterialTheme.typography.bodyMedium,
+            modifier = Modifier.align(Alignment.BottomCenter),
+            textAlign = TextAlign.Center
+        )
     }
 }
