@@ -9,6 +9,7 @@ import android.os.Bundle
 import android.os.Handler
 import android.os.Looper
 import android.widget.Toast
+import android.os.Build
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.result.contract.ActivityResultContracts
@@ -28,7 +29,6 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.core.content.ContextCompat
-import com.example.agendados.BuildConfig
 import com.example.agendados.ui.theme.AgendadosTheme
 
 class MainActivity : ComponentActivity() {
@@ -58,6 +58,7 @@ class MainActivity : ComponentActivity() {
                 ) {
                     FichaScreen(
                         phoneNumber = stringResource(id = R.string.phone_number),
+                        appVersion = getAppVersionName(),
                         onCallClick = { initiateCall() }
                     )
                 }
@@ -113,11 +114,30 @@ class MainActivity : ComponentActivity() {
             }
         }, 1000)
     }
+
+    private fun getAppVersionName(): String {
+        return try {
+            val packageInfo = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+                packageManager.getPackageInfo(
+                    packageName,
+                    PackageManager.PackageInfoFlags.of(0)
+                )
+            } else {
+                @Suppress("DEPRECATION")
+                val legacyInfo = packageManager.getPackageInfo(packageName, 0)
+                legacyInfo
+            }
+            packageInfo.versionName ?: ""
+        } catch (ignored: PackageManager.NameNotFoundException) {
+            ""
+        }
+    }
 }
 
 @Composable
 fun FichaScreen(
     phoneNumber: String,
+    appVersion: String,
     onCallClick: () -> Unit,
     modifier: Modifier = Modifier
 ) {
@@ -143,7 +163,7 @@ fun FichaScreen(
         }
 
         Text(
-            text = stringResource(id = R.string.version_label, BuildConfig.VERSION_NAME),
+            text = stringResource(id = R.string.version_label, appVersion),
             style = MaterialTheme.typography.bodyMedium,
             modifier = Modifier.align(Alignment.BottomCenter),
             textAlign = TextAlign.Center
