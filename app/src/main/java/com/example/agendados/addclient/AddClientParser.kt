@@ -1,0 +1,231 @@
+package com.example.agendados.addclient
+
+import java.text.Normalizer
+import java.time.LocalTime
+import java.util.Locale
+
+private val PHONE_REGEX = Regex("9[\\d\\s.\\-]{8,}")
+private val NUMBER_REGEX = Regex("""\\b\\d[\\d.,\\s]*\\d(?:\\s*(?:k|mil))?\\b""", RegexOption.IGNORE_CASE)
+private val COMMENT_REGEX = Regex("(?i)comentarios?:\\s*(.*)")
+private val NAME_KEYWORD_REGEX = Regex("(?i)(?:nombre|se llama|cliente)\\s*[:\\-]?\\s*([A-Za-zÁÉÍÓÚÜÑáéíóúüñ]+(?:\\s+[A-Za-zÁÉÍÓÚÜÑáéíóúüñ]+)*)")
+private val TIME_REGEX = Regex("""(?i)\\b(\\d{1,2})(?::(\\d{2}))?\\s*(a\\.?m\\.?|p\\.?m\\.?|am|pm)?\\b""")
+private val AM_PM_ONLY_REGEX = Regex("(?i)\\b(?:am|pm|a\\.?m\\.?|p\\.?m\\.?)\\b")
+private val CD_REGEX = Regex("\\bcd\\b")
+
+private val INVALID_NAME_TOKENS = setOf("celular", "telefono", "teléfono", "numero", "número", "es")
+
+/**
+ * Result returned after parsing a dictation text.
+ */
+data class ParserResult(
+    val celular: String? = null,
+    val nombre: String? = null,
+    val montoPP: String? = null,
+    val tasaPP: String? = null,
+    val deuda: String? = null,
+    val montoCD: String? = null,
+    val tasaCD: String? = null,
+    val comentarios: String? = null,
+    val scheduledTime: LocalTime? = null
+)
+
+/**
+ * Parses the provided dictation [input] and returns a [ParserResult].
+ */
+fun parseDictation(input: String): ParserResult {
+    val normalizedInput = normalizeText(input)
+    val phoneDetection = detectPhone(normalizedInput)
+    val phone = phoneDetection?.digits
+    val name = detectName(input, phoneDetection?.range)
+    val comment = detectComment(input)
+    val monetaryMatches = NUMBER_REGEX.findAll(input)
+    var montoPP: String? = null
+    var tasaPP: String? = null
+    var deuda: String? = null
+    var montoCD: String? = null
+    var tasaCD: String? = null
+
+    for (match in monetaryMatches) {
+        val rawValue = match.value
+        val context = extractContext(normalizedInput, match.range)
+        val digitSequence = rawValue.filter { it.isDigit() }
+        if (digitSequence.length == 9 && digitSequence.startsWith("9")) {
+            continue
+        }
+        val normalizedAmount = normalizeAmount(rawValue)
+        val normalizedRate = normalizeRate(rawValue)
+        val before = normalizedInput.substring((match.range.first - 20).coerceAtLeast(0), match.range.first)
+        val after = normalizedInput.substring(match.range.last + 1, (match.range.last + 21).coerceAtMost(normalizedInput.length))
+        val combined = before + after
+        val isRateContext = before.contains("tasa") || after.contains("tasa")
+        val isCdMentioned = CD_REGEX.containsMatchIn(before) || CD_REGEX.containsMatchIn(after)
+        val compraMentioned = combined.contains("compra")
+        val trasladoMentioned = combined.contains("traslado")
+        val montoCdMentioned = combined.contains("monto cd")
+        val isCompraDeDeudaPhrase = combined.contains("compra de deuda")
+        val isCdContext = isCdMentioned || compraMentioned || trasladoMentioned || montoCdMentioned || isCompraDeDeudaPhrase
+        val isDebtContext = before.contains("deuda") || after.contains("deuda") || before.contains("saldo") || after.contains("saldo")
+        val isMontoKeyword = before.contains("monto") || after.contains("monto") ||
+            before.contains("prestamo") || after.contains("prestamo") ||
+            before.contains("préstamo") || after.contains("préstamo")
+
+        if (isRateContext || context.contains("tasa")) {
+            if (isCdContext || context.contains("cd") || context.contains("compra")) {
+                if (tasaCD == null) {
+                    tasaCD = normalizedRate
+                }
+            } else if (tasaPP == null) {
+                tasaPP = normalizedRate
+            }
+            continue
+        }
+
+        if (isCdContext || context.contains("compra") || context.contains("traslado") || context.contains("monto cd")) {
+            if (montoCD == null) {
+                montoCD = normalizedAmount
+            }
+            continue
+        }
+
+        if (isDebtContext || context.contains("deuda") || context.contains("saldo")) {
+            if (!isCompraDeDeudaPhrase && !context.contains("compra de deuda") && deuda == null) {
+                deuda = normalizedAmount
+            }
+            continue
+        }
+
+        if (isMontoKeyword || context.contains("monto") || context.contains("prestamo") || context.contains("préstamo")) {
+            if (!isCdContext && !context.contains("cd") && montoPP == null) {
+                montoPP = normalizedAmount
+            }
+            continue
+        }
+
+        if (montoPP == null) {
+            montoPP = normalizedAmount
+        }
+    }
+
+    val time = detectTime(input)
+
+    return ParserResult(
+        celular = phone,
+        nombre = name,
+        montoPP = montoPP,
+        tasaPP = tasaPP,
+        deuda = deuda,
+        montoCD = montoCD,
+        tasaCD = tasaCD,
+        comentarios = comment,
+        scheduledTime = time
+    )
+}
+
+private fun normalizeText(input: String): String {
+    val lower = input.lowercase(Locale.getDefault())
+    val normalized = Normalizer.normalize(lower, Normalizer.Form.NFD)
+    return normalized.replace("\\p{InCombiningDiacriticalMarks}".toRegex(), "")
+}
+
+private data class PhoneDetection(val digits: String, val range: IntRange)
+
+private fun detectPhone(text: String): PhoneDetection? {
+    val match = PHONE_REGEX.find(text) ?: return null
+    val digits = match.value.filter { it.isDigit() }
+    return if (digits.length == 9) PhoneDetection(digits, match.range) else null
+}
+
+private fun detectName(original: String, phoneRange: IntRange?): String? {
+    val keywordMatch = NAME_KEYWORD_REGEX.find(original)
+    if (keywordMatch != null) {
+        val raw = keywordMatch.groupValues[1]
+        return raw.trim().uppercase(Locale.getDefault())
+    }
+
+    if (phoneRange != null) {
+        val afterPhone = original.substring((phoneRange.last + 1).coerceAtMost(original.length))
+        val tokens = afterPhone.split(" ", ",", ".", "-", "\n")
+        for (token in tokens) {
+            val trimmed = token.trim()
+            if (trimmed.isEmpty()) continue
+            val normalizedToken = normalizeText(trimmed)
+            if (INVALID_NAME_TOKENS.contains(normalizedToken)) continue
+            if (trimmed.firstOrNull()?.isUpperCase() == true) {
+                return trimmed.uppercase(Locale.getDefault())
+            }
+        }
+    }
+
+    return null
+}
+
+private fun detectComment(input: String): String? {
+    // Future parser extension: keep this logic isolated to allow replacing the detection
+    // strategy without touching the main pipeline.
+    val match = COMMENT_REGEX.find(input) ?: return null
+    return match.groupValues[1].trim().takeIf { it.isNotEmpty() }
+}
+
+private fun extractContext(text: String, range: IntRange): String {
+    val start = (range.first - 40).coerceAtLeast(0)
+    val end = (range.last + 40).coerceAtMost(text.length)
+    return text.substring(start, end)
+}
+
+private fun normalizeAmount(raw: String): String {
+    val lowered = raw.lowercase(Locale.getDefault()).trim()
+    val multiplier = when {
+        lowered.contains("k") || lowered.contains("mil") -> 1_000
+        else -> 1
+    }
+    val digitsOnly = lowered.replace("k", "").replace("mil", "")
+        .replace(" ", "").replace(".", "").replace(",", "")
+    val amount = digitsOnly.toBigDecimalOrNull()?.times(multiplier.toBigDecimal())
+        ?: return raw.trim()
+    val rounded = amount.setScale(0, java.math.RoundingMode.HALF_UP)
+    return try {
+        formatAmount(rounded.toBigInteger().longValueExact())
+    } catch (ex: ArithmeticException) {
+        raw.trim()
+    }
+}
+
+private fun formatAmount(value: Long): String {
+    val formatted = String.format(Locale.US, "%,d", value)
+    return formatted.replace(",", ".")
+}
+
+private fun normalizeRate(raw: String): String {
+    val cleaned = raw.replace("%", "").replace(" ", "")
+        .replace(",", ".")
+    val number = cleaned.toBigDecimalOrNull() ?: return raw.trim()
+    val normalized = number.stripTrailingZeros().toPlainString()
+    return "$normalized%"
+}
+
+private fun detectTime(input: String): LocalTime? {
+    val amPmOnly = AM_PM_ONLY_REGEX.find(input)
+    if (amPmOnly != null && !TIME_REGEX.containsMatchIn(input)) {
+        return LocalTime.of(10, 30)
+    }
+
+    val match = TIME_REGEX.find(input) ?: return null
+    val hour = match.groupValues[1].toIntOrNull() ?: return null
+    val minute = match.groupValues.getOrNull(2)?.toIntOrNull() ?: 0
+    val meridianRaw = match.groupValues.getOrNull(3)
+    return when {
+        meridianRaw.isNullOrBlank() -> {
+            if (hour in 0..23) {
+                LocalTime.of(hour % 24, minute.coerceIn(0, 59))
+            } else null
+        }
+
+        meridianRaw.contains("p", ignoreCase = true) -> {
+            LocalTime.of(if (hour % 12 == 0) 12 else (hour % 12 + 12), minute.coerceIn(0, 59))
+        }
+
+        else -> {
+            LocalTime.of(hour % 12, minute.coerceIn(0, 59))
+        }
+    }
+}
