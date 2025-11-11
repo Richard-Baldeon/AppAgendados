@@ -22,7 +22,7 @@
             android:turnScreenOn="true" />
 
         <activity
-            android:name=".home.HomeActivity"
+            android:name=".addclient.AddClientActivity"
             android:exported="true"
             android:configChanges="keyboard|keyboardHidden|orientation|screenSize|uiMode"
             android:screenOrientation="portrait">
@@ -32,12 +32,6 @@
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
         </activity>
-
-        <activity
-            android:name=".addclient.AddClientActivity"
-            android:exported="false"
-            android:configChanges="keyboard|keyboardHidden|orientation|screenSize|uiMode"
-            android:screenOrientation="portrait" />
 
         <activity
             android:name=".MainActivity"
