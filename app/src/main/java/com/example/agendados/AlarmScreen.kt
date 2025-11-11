@@ -1,6 +1,7 @@
 package com.example.agendados
 
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
@@ -15,6 +16,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
+import com.example.agendados.ui.components.HomeNavigationButton
 
 @Composable
 fun AlarmScreen(
@@ -23,16 +25,25 @@ fun AlarmScreen(
     phoneNumber: String,
     onSnooze: () -> Unit,
     onDismiss: () -> Unit,
-    onCall: () -> Unit
+    onCall: () -> Unit,
+    onHome: () -> Unit
 ) {
     Surface(modifier = Modifier.fillMaxSize()) {
-        Column(
+        Box(
             modifier = Modifier
                 .fillMaxSize()
-                .padding(24.dp),
-            verticalArrangement = Arrangement.spacedBy(24.dp, Alignment.CenterVertically),
-            horizontalAlignment = Alignment.CenterHorizontally
+                .padding(24.dp)
         ) {
+            HomeNavigationButton(
+                onClick = onHome,
+                modifier = Modifier.align(Alignment.TopStart)
+            )
+
+            Column(
+                modifier = Modifier.align(Alignment.Center),
+                verticalArrangement = Arrangement.spacedBy(24.dp, Alignment.CenterVertically),
+                horizontalAlignment = Alignment.CenterHorizontally
+            ) {
             Text(
                 text = stringResource(id = R.string.alarm_screen_title),
                 style = MaterialTheme.typography.headlineSmall,
