@@ -54,13 +54,4 @@
     <string name="tomorrow_label">mañana</string>
     <string name="audio_permission_required">Activa el permiso de micrófono.</string>
     <string name="no_speech_recognizer">No se encontró el reconocedor de voz.</string>
-    <string name="home_title">App Agendados</string>
-    <string name="home_subtitle">Selecciona una opción para continuar</string>
-    <string name="home_option_add">Añadir</string>
-    <string name="home_option_add_description">Registrar un nuevo cliente</string>
-    <string name="home_option_delete">Eliminar</string>
-    <string name="home_option_iterate">Iterar</string>
-    <string name="home_option_ticket">Ticket</string>
-    <string name="home_option_pending">Disponible próximamente</string>
-    <string name="home_option_coming_soon">La opción %1$s estará disponible próximamente.</string>
 </resources>
