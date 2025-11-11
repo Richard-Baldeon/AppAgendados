@@ -59,19 +59,26 @@ import androidx.core.content.ContextCompat
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.example.agendados.R
 import com.example.agendados.ui.theme.AgendadosTheme
+import com.example.agendados.ui.components.HomeNavigationButton
 import java.time.LocalDate
 import java.util.Locale
 
 @Composable
-fun AddClientActivityContent() {
+fun AddClientActivityContent(onHomeClick: () -> Unit) {
     AgendadosTheme(darkTheme = false, dynamicColor = false) {
         val viewModel: AddClientViewModel = viewModel(factory = AddClientViewModelFactory())
-        AddClientRoute(viewModel)
+        AddClientRoute(
+            viewModel = viewModel,
+            onHomeClick = onHomeClick
+        )
     }
 }
 
 @Composable
-fun AddClientRoute(viewModel: AddClientViewModel) {
+fun AddClientRoute(
+    viewModel: AddClientViewModel,
+    onHomeClick: () -> Unit
+) {
     val state by viewModel.uiState.collectAsState()
     val context = LocalContext.current
     var alertReason by rememberSaveable { mutableStateOf<ScheduleAlertReason?>(null) }
@@ -127,7 +134,8 @@ fun AddClientRoute(viewModel: AddClientViewModel) {
             } else {
                 alertReason = reason
             }
-        }
+        },
+        onHomeClick = onHomeClick
     )
 
     if (alertReason != null) {
@@ -163,6 +171,7 @@ fun AddClientScreen(
     onMinuteChange: (Int) -> Unit,
     onPeriodChange: (Boolean) -> Unit,
     onConfirm: () -> Unit,
+    onHomeClick: () -> Unit,
     modifier: Modifier = Modifier
 ) {
     val scrollState = rememberScrollState()
@@ -173,6 +182,11 @@ fun AddClientScreen(
             .padding(horizontal = 24.dp)
             .verticalScroll(scrollState)
     ) {
+        Spacer(modifier = Modifier.height(16.dp))
+        HomeNavigationButton(
+            onClick = onHomeClick,
+            modifier = Modifier.align(Alignment.Start)
+        )
         Spacer(modifier = Modifier.height(32.dp))
         Text(
             text = stringResource(id = R.string.add_client_title),

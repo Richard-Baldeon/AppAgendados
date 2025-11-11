@@ -19,6 +19,7 @@ import com.example.agendados.alarm.AlarmStorage
 import com.example.agendados.alarm.EXTRA_AMOUNT
 import com.example.agendados.alarm.EXTRA_CONTACT_NAME
 import com.example.agendados.alarm.EXTRA_PHONE_NUMBER
+import com.example.agendados.home.HomeActivity
 import com.example.agendados.ui.theme.AgendadosTheme
 import java.util.concurrent.TimeUnit
 
@@ -56,6 +57,9 @@ class AlarmActivity : ComponentActivity() {
                     },
                     onCall = {
                         handleCall(payload)
+                    },
+                    onHome = {
+                        navigateHome(payload)
                     }
                 )
             }
@@ -79,11 +83,7 @@ class AlarmActivity : ComponentActivity() {
     }
 
     private fun dismissAlarm(payload: AlarmPayload) {
-        stopAlarmSound()
-        AlarmNotifications.cancelAlarmNotification(this)
-        AlarmScheduler.cancelAlarm(this, payload)
-        AlarmStorage.clearAlarmTime(this)
-        Toast.makeText(this, R.string.alarm_dismissed, Toast.LENGTH_SHORT).show()
+        clearAlarmState(payload, showDismissedToast = true)
         finish()
     }
 
@@ -98,6 +98,25 @@ class AlarmActivity : ComponentActivity() {
         }
         startActivity(mainIntent)
         finish()
+    }
+
+    private fun navigateHome(payload: AlarmPayload) {
+        clearAlarmState(payload, showDismissedToast = false)
+        val intent = Intent(this, HomeActivity::class.java).apply {
+            addFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP)
+        }
+        startActivity(intent)
+        finish()
+    }
+
+    private fun clearAlarmState(payload: AlarmPayload, showDismissedToast: Boolean) {
+        stopAlarmSound()
+        AlarmNotifications.cancelAlarmNotification(this)
+        AlarmScheduler.cancelAlarm(this, payload)
+        AlarmStorage.clearAlarmTime(this)
+        if (showDismissedToast) {
+            Toast.makeText(this, R.string.alarm_dismissed, Toast.LENGTH_SHORT).show()
+        }
     }
 
     private fun startAlarmSound() {
