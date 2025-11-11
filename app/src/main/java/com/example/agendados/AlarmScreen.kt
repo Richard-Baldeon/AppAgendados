@@ -44,6 +44,32 @@ fun AlarmScreen(
                 verticalArrangement = Arrangement.spacedBy(24.dp, Alignment.CenterVertically),
                 horizontalAlignment = Alignment.CenterHorizontally
             ) {
+            Text(
+                text = stringResource(id = R.string.alarm_screen_title),
+                style = MaterialTheme.typography.headlineSmall,
+                textAlign = TextAlign.Center
+            )
+            Text(
+                text = stringResource(id = R.string.alarm_message_name, contactName),
+                style = MaterialTheme.typography.bodyLarge,
+                textAlign = TextAlign.Center
+            )
+            Text(
+                text = stringResource(id = R.string.alarm_message_amount, amount),
+                style = MaterialTheme.typography.bodyLarge,
+                textAlign = TextAlign.Center
+            )
+            Text(
+                text = stringResource(id = R.string.alarm_phone_number_label, phoneNumber),
+                style = MaterialTheme.typography.bodyMedium,
+                textAlign = TextAlign.Center
+            )
+
+            Column(
+                modifier = Modifier.align(Alignment.Center),
+                verticalArrangement = Arrangement.spacedBy(24.dp, Alignment.CenterVertically),
+                horizontalAlignment = Alignment.CenterHorizontally
+            ) {
                 Text(
                     text = stringResource(id = R.string.alarm_screen_title),
                     style = MaterialTheme.typography.headlineSmall,

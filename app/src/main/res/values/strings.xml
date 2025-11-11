@@ -44,8 +44,6 @@
     <string name="home_option_ticket">Generar ticket</string>
     <string name="home_option_pending">Próximamente disponible</string>
     <string name="home_option_coming_soon">La opción %1$s estará disponible pronto.</string>
-    <string name="home_button_label">Inicio</string>
-    <string name="home_button_content_description">Volver al inicio</string>
     <string name="field_celular">Celular</string>
     <string name="field_nombre">Nombre</string>
     <string name="field_monto_pp">Monto PP</string>
