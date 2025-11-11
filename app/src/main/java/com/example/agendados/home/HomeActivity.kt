@@ -22,22 +22,13 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
+import com.example.agendados.R
 import com.example.agendados.addclient.AddClientActivity
 import com.example.agendados.ui.theme.AgendadosTheme
-import java.util.Locale
-
-private const val HOME_TITLE = "App Agendados"
-private const val HOME_SUBTITLE = "Selecciona una opción para continuar"
-private const val HOME_OPTION_ADD = "Añadir"
-private const val HOME_OPTION_ADD_DESCRIPTION = "Registrar un nuevo cliente"
-private const val HOME_OPTION_DELETE = "Eliminar"
-private const val HOME_OPTION_ITERATE = "Iterar"
-private const val HOME_OPTION_TICKET = "Ticket"
-private const val HOME_OPTION_PENDING = "Disponible próximamente"
-private const val HOME_OPTION_COMING_SOON_TEMPLATE = "La opción %s estará disponible próximamente."
 
 class HomeActivity : ComponentActivity() {
 
@@ -46,18 +37,10 @@ class HomeActivity : ComponentActivity() {
         setContent {
             AgendadosTheme {
                 HomeScreen(
-                    title = HOME_TITLE,
-                    subtitle = HOME_SUBTITLE,
-                    addTitle = HOME_OPTION_ADD,
-                    addDescription = HOME_OPTION_ADD_DESCRIPTION,
-                    deleteTitle = HOME_OPTION_DELETE,
-                    iterateTitle = HOME_OPTION_ITERATE,
-                    ticketTitle = HOME_OPTION_TICKET,
-                    pendingDescription = HOME_OPTION_PENDING,
                     onAddClick = { openAddClient() },
-                    onEliminarClick = { showComingSoonToast(HOME_OPTION_DELETE) },
-                    onIterarClick = { showComingSoonToast(HOME_OPTION_ITERATE) },
-                    onTicketClick = { showComingSoonToast(HOME_OPTION_TICKET) }
+                    onEliminarClick = { showComingSoonToast(R.string.home_option_delete) },
+                    onIterarClick = { showComingSoonToast(R.string.home_option_iterate) },
+                    onTicketClick = { showComingSoonToast(R.string.home_option_ticket) }
                 )
             }
         }
@@ -67,22 +50,14 @@ class HomeActivity : ComponentActivity() {
         startActivity(Intent(this, AddClientActivity::class.java))
     }
 
-    private fun showComingSoonToast(optionName: String) {
-        val message = String.format(Locale.getDefault(), HOME_OPTION_COMING_SOON_TEMPLATE, optionName)
+    private fun showComingSoonToast(optionRes: Int) {
+        val message = getString(R.string.home_option_coming_soon, getString(optionRes))
         Toast.makeText(this, message, Toast.LENGTH_SHORT).show()
     }
 }
 
 @Composable
 fun HomeScreen(
-    title: String,
-    subtitle: String,
-    addTitle: String,
-    addDescription: String,
-    deleteTitle: String,
-    iterateTitle: String,
-    ticketTitle: String,
-    pendingDescription: String,
     onAddClick: () -> Unit,
     onEliminarClick: () -> Unit,
     onIterarClick: () -> Unit,
@@ -102,37 +77,37 @@ fun HomeScreen(
         ) {
             Column(horizontalAlignment = Alignment.CenterHorizontally) {
                 Text(
-                    text = title,
+                    text = stringResource(id = R.string.home_title),
                     style = MaterialTheme.typography.headlineMedium,
                     fontWeight = FontWeight.Bold,
                     textAlign = TextAlign.Center
                 )
                 Spacer(modifier = Modifier.height(8.dp))
                 Text(
-                    text = subtitle,
+                    text = stringResource(id = R.string.home_subtitle),
                     style = MaterialTheme.typography.bodyMedium,
                     textAlign = TextAlign.Center
                 )
             }
 
             MenuOption(
-                title = addTitle,
-                description = addDescription,
+                title = stringResource(id = R.string.home_option_add),
+                description = stringResource(id = R.string.home_option_add_description),
                 onClick = onAddClick
             )
             MenuOption(
-                title = deleteTitle,
-                description = pendingDescription,
+                title = stringResource(id = R.string.home_option_delete),
+                description = stringResource(id = R.string.home_option_pending),
                 onClick = onEliminarClick
             )
             MenuOption(
-                title = iterateTitle,
-                description = pendingDescription,
+                title = stringResource(id = R.string.home_option_iterate),
+                description = stringResource(id = R.string.home_option_pending),
                 onClick = onIterarClick
             )
             MenuOption(
-                title = ticketTitle,
-                description = pendingDescription,
+                title = stringResource(id = R.string.home_option_ticket),
+                description = stringResource(id = R.string.home_option_pending),
                 onClick = onTicketClick
             )
         }
