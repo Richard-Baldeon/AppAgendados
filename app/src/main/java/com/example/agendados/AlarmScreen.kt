@@ -1,6 +1,7 @@
 package com.example.agendados
 
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
@@ -28,17 +29,44 @@ fun AlarmScreen(
     onHome: () -> Unit
 ) {
     Surface(modifier = Modifier.fillMaxSize()) {
-        Column(
+        Box(
             modifier = Modifier
                 .fillMaxSize()
                 .padding(24.dp)
         ) {
-            HomeNavigationButton(onClick = onHome)
+            HomeNavigationButton(
+                onClick = onHome,
+                modifier = Modifier.align(Alignment.TopStart)
+            )
 
             Column(
-                modifier = Modifier
-                    .weight(1f)
-                    .fillMaxWidth(),
+                modifier = Modifier.align(Alignment.Center),
+                verticalArrangement = Arrangement.spacedBy(24.dp, Alignment.CenterVertically),
+                horizontalAlignment = Alignment.CenterHorizontally
+            ) {
+            Text(
+                text = stringResource(id = R.string.alarm_screen_title),
+                style = MaterialTheme.typography.headlineSmall,
+                textAlign = TextAlign.Center
+            )
+            Text(
+                text = stringResource(id = R.string.alarm_message_name, contactName),
+                style = MaterialTheme.typography.bodyLarge,
+                textAlign = TextAlign.Center
+            )
+            Text(
+                text = stringResource(id = R.string.alarm_message_amount, amount),
+                style = MaterialTheme.typography.bodyLarge,
+                textAlign = TextAlign.Center
+            )
+            Text(
+                text = stringResource(id = R.string.alarm_phone_number_label, phoneNumber),
+                style = MaterialTheme.typography.bodyMedium,
+                textAlign = TextAlign.Center
+            )
+
+            Column(
+                modifier = Modifier.align(Alignment.Center),
                 verticalArrangement = Arrangement.spacedBy(24.dp, Alignment.CenterVertically),
                 horizontalAlignment = Alignment.CenterHorizontally
             ) {
