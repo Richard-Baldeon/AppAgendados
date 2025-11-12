@@ -73,7 +73,13 @@ import java.util.Locale
 @Composable
 fun AddClientActivityContent(onHomeClick: () -> Unit) {
     AgendadosTheme(darkTheme = false, dynamicColor = false) {
-        val viewModel: AddClientViewModel = viewModel(factory = AddClientViewModelFactory())
+        val context = LocalContext.current
+        val repository = remember(context.applicationContext) {
+            ClientRepository.getInstance(context.applicationContext)
+        }
+        val viewModel: AddClientViewModel = viewModel(
+            factory = AddClientViewModelFactory(repository)
+        )
         AddClientRoute(
             viewModel = viewModel,
             onHomeClick = onHomeClick
@@ -229,8 +235,18 @@ fun AddClientRoute(
         }
     }
 
+    val isMicEnabled = speechAvailable && speechRecognizer != null
+    val listeningHint = if (!isMicEnabled) {
+        context.getString(R.string.no_speech_recognizer)
+    } else {
+        null
+    }
+
     AddClientScreen(
         state = state,
+        isMicEnabled = isMicEnabled,
+        isListening = isListening,
+        listeningMessage = listeningHint,
         onMicClick = { handleMicClick() },
         onCelularChange = viewModel::updateCelular,
         onNombreChange = viewModel::updateNombre,
@@ -276,6 +292,9 @@ fun AddClientRoute(
 @Composable
 fun AddClientScreen(
     state: AddClientUiState,
+    isMicEnabled: Boolean,
+    isListening: Boolean,
+    listeningMessage: String? = null,
     onMicClick: () -> Unit,
     onCelularChange: (String) -> Unit,
     onNombreChange: (String) -> Unit,
@@ -344,7 +363,7 @@ fun AddClientScreen(
         }
         Spacer(modifier = Modifier.height(12.dp))
         Text(
-            text = listeningMessage,
+            text = displayListeningMessage,
             style = MaterialTheme.typography.bodyMedium,
             modifier = Modifier.fillMaxWidth(),
             textAlign = TextAlign.Center,
