@@ -44,6 +44,101 @@ private val numberFormatter = RuleBasedNumberFormat(
     RuleBasedNumberFormat.SPELLOUT
 )
 
+private val DIGIT_WORDS = mapOf(
+    "cero" to "0",
+    "uno" to "1",
+    "una" to "1",
+    "dos" to "2",
+    "tres" to "3",
+    "cuatro" to "4",
+    "cinco" to "5",
+    "seis" to "6",
+    "siete" to "7",
+    "ocho" to "8",
+    "nueve" to "9"
+)
+private val SMALL_NUMBER_WORDS: Map<String, Long> = mapOf(
+    "cero" to 0,
+    "un" to 1,
+    "uno" to 1,
+    "una" to 1,
+    "dos" to 2,
+    "tres" to 3,
+    "cuatro" to 4,
+    "cinco" to 5,
+    "seis" to 6,
+    "siete" to 7,
+    "ocho" to 8,
+    "nueve" to 9,
+    "diez" to 10,
+    "once" to 11,
+    "doce" to 12,
+    "trece" to 13,
+    "catorce" to 14,
+    "quince" to 15,
+    "dieciseis" to 16,
+    "diecisiete" to 17,
+    "dieciocho" to 18,
+    "diecinueve" to 19,
+    "veinte" to 20,
+    "veintiuno" to 21,
+    "veintidos" to 22,
+    "veintitres" to 23,
+    "veinticuatro" to 24,
+    "veinticinco" to 25,
+    "veintiseis" to 26,
+    "veintisiete" to 27,
+    "veintiocho" to 28,
+    "veintinueve" to 29
+)
+private val TENS_NUMBER_WORDS: Map<String, Long> = mapOf(
+    "treinta" to 30,
+    "cuarenta" to 40,
+    "cincuenta" to 50,
+    "sesenta" to 60,
+    "setenta" to 70,
+    "ochenta" to 80,
+    "noventa" to 90
+)
+private val HUNDRED_NUMBER_WORDS: Map<String, Long> = mapOf(
+    "cien" to 100,
+    "ciento" to 100,
+    "doscientos" to 200,
+    "trescientos" to 300,
+    "cuatrocientos" to 400,
+    "quinientos" to 500,
+    "seiscientos" to 600,
+    "setecientos" to 700,
+    "ochocientos" to 800,
+    "novecientos" to 900
+)
+private val LARGE_SCALE_NUMBER_WORDS: Map<String, Long> = mapOf(
+    "mil" to 1_000,
+    "millon" to 1_000_000,
+    "millones" to 1_000_000,
+    "billon" to 1_000_000_000,
+    "billones" to 1_000_000_000
+)
+private val NUMBER_IGNORED_TOKENS = setOf("y", "con", "de", "del")
+private val STOP_KEYWORDS: List<String> = listOf(
+    "fin",
+    "listo",
+    "terminar",
+    "ok",
+    "tasa",
+    "deuda",
+    "monto",
+    "saldo",
+    "comentario",
+    "comentarios",
+    "compra",
+    "traslado",
+    "celular",
+    "telefono",
+    "teléfono",
+    "nombre"
+)
+
 private val PHONE_REGEX = Regex("9[\\d\\s.\\-]{8,}")
 private val NUMBER_REGEX = Regex("""\\b\\d[\\d.,\\s]*\\d(?:\\s*(?:k|mil))?\\b""", RegexOption.IGNORE_CASE)
 private val COMMENT_REGEX = Regex("(?i)comentarios?:\\s*(.*)")
