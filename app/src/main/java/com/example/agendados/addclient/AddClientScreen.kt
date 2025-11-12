@@ -1,15 +1,15 @@
 package com.example.agendados.addclient
 
 import android.Manifest
-import android.app.Activity
-import android.content.ActivityNotFoundException
 import android.content.Context
 import android.content.Intent
+import android.os.Bundle
 import android.speech.RecognizerIntent
+import android.speech.RecognitionListener
+import android.speech.SpeechRecognizer
 import android.widget.NumberPicker
 import android.widget.Toast
 import androidx.activity.compose.rememberLauncherForActivityResult
-import androidx.activity.result.ActivityResultLauncher
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -33,11 +33,14 @@ import androidx.compose.material.icons.rounded.Mic
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -56,8 +59,12 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.core.content.ContextCompat
+import androidx.lifecycle.compose.LocalLifecycleOwner
+import androidx.lifecycle.DefaultLifecycleObserver
+import androidx.lifecycle.LifecycleOwner
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.example.agendados.R
+import com.example.agendados.data.ClientRepository
 import com.example.agendados.ui.theme.AgendadosTheme
 import com.example.agendados.ui.components.HomeNavigationButton
 import java.time.LocalDate
@@ -83,32 +90,142 @@ fun AddClientRoute(
     val context = LocalContext.current
     var alertReason by rememberSaveable { mutableStateOf<ScheduleAlertReason?>(null) }
 
-    val speechLauncher = rememberLauncherForActivityResult(ActivityResultContracts.StartActivityForResult()) { result ->
-        if (result.resultCode == Activity.RESULT_OK) {
-            val spoken = result.data?.getStringArrayListExtra(RecognizerIntent.EXTRA_RESULTS)?.firstOrNull()
-            if (!spoken.isNullOrBlank()) {
-                viewModel.onDictation(spoken)
+    var isListening by rememberSaveable { mutableStateOf(false) }
+    var speechError by remember { mutableStateOf<String?>(null) }
+    val speechAvailable = remember { SpeechRecognizer.isRecognitionAvailable(context) }
+    val speechRecognizer = remember(speechAvailable) {
+        if (speechAvailable) {
+            SpeechRecognizer.createSpeechRecognizer(context).apply {
+                setRecognitionListener(object : RecognitionListener {
+                override fun onReadyForSpeech(params: Bundle?) {
+                    isListening = true
+                }
+
+                override fun onBeginningOfSpeech() {
+                    isListening = true
+                }
+
+                override fun onRmsChanged(rmsdB: Float) = Unit
+
+                override fun onBufferReceived(buffer: ByteArray?) = Unit
+
+                override fun onEndOfSpeech() {
+                    isListening = false
+                }
+
+                override fun onError(error: Int) {
+                    isListening = false
+                    speechError = mapSpeechError(context, error)
+                }
+
+                override fun onResults(results: Bundle?) {
+                    isListening = false
+                    val spoken = results?.getStringArrayList(SpeechRecognizer.RESULTS_RECOGNITION)?.firstOrNull()
+                    if (!spoken.isNullOrBlank()) {
+                        viewModel.onDictation(spoken)
+                    } else {
+                        speechError = context.getString(R.string.speech_no_text_captured)
+                    }
+                }
+
+                override fun onPartialResults(partialResults: Bundle?) = Unit
+
+                override fun onEvent(eventType: Int, params: Bundle?) = Unit
+                })
+            }
+        } else {
+            null
+        }
+    }
+    val recognitionIntent = remember {
+        Intent(RecognizerIntent.ACTION_RECOGNIZE_SPEECH).apply {
+            putExtra(RecognizerIntent.EXTRA_LANGUAGE_MODEL, RecognizerIntent.LANGUAGE_MODEL_FREE_FORM)
+            putExtra(RecognizerIntent.EXTRA_LANGUAGE, Locale.getDefault())
+            putExtra(RecognizerIntent.EXTRA_PROMPT, context.getString(R.string.add_client_title))
+        }
+    }
+    val lifecycleOwner = LocalLifecycleOwner.current
+    speechRecognizer?.let { recognizer ->
+        DisposableEffect(recognizer, lifecycleOwner) {
+            val observer = object : DefaultLifecycleObserver {
+                override fun onStop(owner: LifecycleOwner) {
+                    if (isListening) {
+                        recognizer.stopListening()
+                        isListening = false
+                    }
+                }
+
+                override fun onDestroy(owner: LifecycleOwner) {
+                    recognizer.cancel()
+                    recognizer.destroy()
+                }
+            }
+            lifecycleOwner.lifecycle.addObserver(observer)
+            onDispose {
+                lifecycleOwner.lifecycle.removeObserver(observer)
+                recognizer.cancel()
+                recognizer.destroy()
             }
         }
     }
 
     val permissionLauncher = rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()) { granted ->
         if (granted) {
-            startSpeechRecognizer(context, speechLauncher)
+            val recognizer = speechRecognizer
+            if (recognizer != null) {
+                startListening(context, recognizer, recognitionIntent) { message ->
+                    speechError = message
+                }
+            } else {
+                speechError = context.getString(R.string.no_speech_recognizer)
+            }
         } else {
             Toast.makeText(context, R.string.audio_permission_required, Toast.LENGTH_SHORT).show()
         }
     }
 
     fun handleMicClick() {
+        if (!speechAvailable || speechRecognizer == null) {
+            speechError = context.getString(R.string.no_speech_recognizer)
+            return
+        }
         val permissionGranted = ContextCompat.checkSelfPermission(
             context,
             Manifest.permission.RECORD_AUDIO
         ) == android.content.pm.PackageManager.PERMISSION_GRANTED
         if (permissionGranted) {
-            startSpeechRecognizer(context, speechLauncher)
+            if (isListening) {
+                speechRecognizer.stopListening()
+                isListening = false
+            } else {
+                startListening(context, speechRecognizer, recognitionIntent) { message ->
+                    speechError = message
+                }
+            }
         } else {
             permissionLauncher.launch(Manifest.permission.RECORD_AUDIO)
+        }
+    }
+
+    LaunchedEffect(speechError) {
+        speechError?.let {
+            Toast.makeText(context, it, Toast.LENGTH_SHORT).show()
+            speechError = null
+        }
+    }
+
+    fun commitSchedule(): Boolean {
+        return when (val result = viewModel.saveCurrentClient()) {
+            is SaveResult.Success -> {
+                Toast.makeText(context, R.string.schedule_saved_message, Toast.LENGTH_SHORT).show()
+                true
+            }
+
+            is SaveResult.ValidationError -> {
+                val message = buildValidationMessage(context, result.errors)
+                Toast.makeText(context, message, Toast.LENGTH_SHORT).show()
+                false
+            }
         }
     }
 
@@ -130,7 +247,7 @@ fun AddClientRoute(
         onConfirm = {
             val reason = viewModel.evaluateSchedule()
             if (reason == null) {
-                Toast.makeText(context, R.string.schedule_saved_message, Toast.LENGTH_SHORT).show()
+                commitSchedule()
             } else {
                 alertReason = reason
             }
@@ -146,10 +263,12 @@ fun AddClientRoute(
             onHourChange = viewModel::onHourSelected,
             onMinuteChange = viewModel::onMinuteSelected,
             onPeriodChange = viewModel::onPeriodSelected,
-            onDismiss = {
-                alertReason = null
-                Toast.makeText(context, R.string.schedule_saved_message, Toast.LENGTH_SHORT).show()
-            }
+            onConfirm = {
+                if (commitSchedule()) {
+                    alertReason = null
+                }
+            },
+            onDismiss = { alertReason = null }
         )
     }
 }
@@ -204,20 +323,32 @@ fun AddClientScreen(
                 modifier = Modifier
                     .size(96.dp)
                     .shadow(12.dp, CircleShape)
-                    .clickable { onMicClick() },
+                    .clickable(enabled = isMicEnabled) { onMicClick() },
                 shape = CircleShape,
-                color = ActionColor
+                color = when {
+                    !isMicEnabled -> ActionColor.copy(alpha = 0.3f)
+                    isListening -> ListeningColor
+                    else -> ActionColor
+                }
             ) {
                 Box(contentAlignment = Alignment.Center) {
                     Icon(
                         imageVector = Icons.Rounded.Mic,
                         contentDescription = stringResource(id = R.string.mic_button_content_description),
-                        tint = Color.White,
+                        tint = if (isMicEnabled) Color.White else Color.White.copy(alpha = 0.7f),
                         modifier = Modifier.size(40.dp)
                     )
                 }
             }
         }
+        Spacer(modifier = Modifier.height(12.dp))
+        Text(
+            text = listeningMessage,
+            style = MaterialTheme.typography.bodyMedium,
+            modifier = Modifier.fillMaxWidth(),
+            textAlign = TextAlign.Center,
+            color = if (isListening) ActionColor else TextColor
+        )
         Spacer(modifier = Modifier.height(32.dp))
         BlockFields(
             state = state,
@@ -564,10 +695,11 @@ private fun ScheduleAlertDialog(
     onHourChange: (Int) -> Unit,
     onMinuteChange: (Int) -> Unit,
     onPeriodChange: (Boolean) -> Unit,
+    onConfirm: () -> Unit,
     onDismiss: () -> Unit
 ) {
     AlertDialog(
-        onDismissRequest = {},
+        onDismissRequest = onDismiss,
         title = {
             Text(
                 text = stringResource(id = R.string.schedule_review_title),
@@ -588,17 +720,23 @@ private fun ScheduleAlertDialog(
         },
         confirmButton = {
             Button(
-                onClick = onDismiss,
+                onClick = onConfirm,
                 colors = ButtonDefaults.buttonColors(containerColor = ActionColor),
                 shape = RoundedCornerShape(12.dp)
             ) {
                 Text(text = stringResource(id = R.string.schedule_review_confirm), color = Color.White)
+            }
+        },
+        dismissButton = {
+            OutlinedButton(onClick = onDismiss) {
+                Text(text = stringResource(id = R.string.schedule_review_cancel))
             }
         }
     )
 }
 
 private val ActionColor = Color(0xFF2BB673)
+private val ListeningColor = Color(0xFF13855C)
 private val TextColor = Color(0xFF1E1E1E)
 private val FieldBackground = Color(0xFFF3F4F6)
 
@@ -617,18 +755,48 @@ private fun buildDayLabel(
     return if (suffix != null) "$base (${suffix})" else base
 }
 
-private fun startSpeechRecognizer(
+private fun startListening(
     context: Context,
-    launcher: ActivityResultLauncher<Intent>
+    speechRecognizer: SpeechRecognizer,
+    intent: Intent,
+    onStartFailure: (String) -> Unit
 ) {
-    val intent = Intent(RecognizerIntent.ACTION_RECOGNIZE_SPEECH).apply {
-        putExtra(RecognizerIntent.EXTRA_LANGUAGE_MODEL, RecognizerIntent.LANGUAGE_MODEL_FREE_FORM)
-        putExtra(RecognizerIntent.EXTRA_LANGUAGE, Locale.getDefault())
-        putExtra(RecognizerIntent.EXTRA_PROMPT, context.getString(R.string.add_client_title))
+    if (!SpeechRecognizer.isRecognitionAvailable(context)) {
+        onStartFailure(context.getString(R.string.no_speech_recognizer))
+        return
     }
-    try {
-        launcher.launch(intent)
-    } catch (ex: ActivityNotFoundException) {
-        Toast.makeText(context, R.string.no_speech_recognizer, Toast.LENGTH_SHORT).show()
+    runCatching {
+        speechRecognizer.startListening(intent)
+    }.onFailure {
+        onStartFailure(context.getString(R.string.speech_error_client))
+    }
+}
+
+private fun mapSpeechError(context: Context, errorCode: Int): String {
+    return when (errorCode) {
+        SpeechRecognizer.ERROR_AUDIO -> context.getString(R.string.speech_error_audio)
+        SpeechRecognizer.ERROR_CLIENT -> context.getString(R.string.speech_error_client)
+        SpeechRecognizer.ERROR_INSUFFICIENT_PERMISSIONS -> context.getString(R.string.audio_permission_required)
+        SpeechRecognizer.ERROR_NETWORK, SpeechRecognizer.ERROR_NETWORK_TIMEOUT -> context.getString(R.string.speech_error_network)
+        SpeechRecognizer.ERROR_NO_MATCH -> context.getString(R.string.speech_no_text_captured)
+        SpeechRecognizer.ERROR_SERVER -> context.getString(R.string.speech_error_server)
+        SpeechRecognizer.ERROR_RECOGNIZER_BUSY -> context.getString(R.string.speech_error_busy)
+        else -> context.getString(R.string.speech_error_unknown)
+    }
+}
+
+private fun buildValidationMessage(context: Context, errors: List<SaveValidationError>): String {
+    val distinctErrors = errors.toSet()
+    return when {
+        distinctErrors.containsAll(setOf(SaveValidationError.MissingName, SaveValidationError.InvalidPhone)) ->
+            context.getString(R.string.validation_missing_name_phone)
+
+        distinctErrors.contains(SaveValidationError.MissingName) ->
+            context.getString(R.string.validation_missing_name)
+
+        distinctErrors.contains(SaveValidationError.InvalidPhone) ->
+            context.getString(R.string.validation_invalid_phone)
+
+        else -> context.getString(R.string.validation_generic_error)
     }
 }

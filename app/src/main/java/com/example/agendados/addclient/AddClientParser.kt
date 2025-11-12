@@ -1,8 +1,11 @@
 package com.example.agendados.addclient
 
+import android.icu.text.RuleBasedNumberFormat
+import java.math.BigDecimal
 import java.text.Normalizer
 import java.time.LocalTime
 import java.util.Locale
+import kotlin.LazyThreadSafetyMode
 
 private val PHONE_REGEX = Regex("9[\\d\\s.\\-]{8,}")
 private val NUMBER_REGEX = Regex("""\\b\\d[\\d.,\\s]*\\d(?:\\s*(?:k|mil))?\\b""", RegexOption.IGNORE_CASE)
@@ -282,5 +285,108 @@ private fun detectTime(input: String): LocalTime? {
         else -> {
             LocalTime.of(hour % 12, minute.coerceIn(0, 59))
         }
+    }
+}
+
+private fun extractValueAfterLabels(input: String, labels: List<String>): String? {
+    val normalizedInput = normalizeText(input)
+    for (label in labels) {
+        val normalizedLabel = normalizeText(label)
+        val index = normalizedInput.indexOf(normalizedLabel)
+        if (index >= 0) {
+            val start = index + normalizedLabel.length
+            if (start >= input.length) continue
+            val tail = input.substring(start)
+            val cleaned = tail.trimStart(' ', ':', '-', '—', '=', '.', ',', ';')
+            val extracted = cleaned.takeUntilStop()
+            if (extracted.isNotBlank()) {
+                return extracted.trim()
+            }
+        }
+    }
+    return null
+}
+
+private fun String.takeUntilStop(): String {
+    if (isEmpty()) return this
+    var end = length
+    val normalized = normalizeText(this)
+    STOP_KEYWORDS.forEach { keyword ->
+        val idx = normalized.indexOf(keyword)
+        if (idx in 0 until end) {
+            end = idx
+        }
+    }
+    val newlineIndex = indexOf('\n')
+    if (newlineIndex in 0 until end) end = newlineIndex
+    val semicolonIndex = indexOf(';')
+    if (semicolonIndex in 0 until end) end = semicolonIndex
+    val colonIndex = indexOf(':')
+    if (colonIndex in 0 until end) end = colonIndex
+    for (i in 0 until end) {
+        val ch = this[i]
+        if ((ch == ',' || ch == '.') && getOrNull(i + 1)?.isDigit() != true) {
+            end = i
+            break
+        }
+    }
+    val trimmedEnd = end.coerceIn(0, length)
+    return substring(0, trimmedEnd).trimEnd(',', '.', '-', ':', ' ')
+}
+
+private fun parseNumberPhrase(text: String, allowFractionFallback: Boolean = true): BigDecimal? {
+    val sanitized = text
+        .replace('-', ' ')
+        .replace(Regex("\s+"), " ")
+        .trim()
+    if (sanitized.isEmpty()) return null
+
+    val normalized = sanitized
+        .replace("punto", " coma ")
+        .replace(",", " coma ")
+        .replace(Regex("\s+"), " ")
+        .trim()
+
+    val parsed = runCatching { numberFormatter.parse(normalized) }.getOrNull()
+    val decimal = parsed?.let { convertNumberToBigDecimal(it) }
+    if (decimal != null) {
+        return decimal
+    }
+
+    if (allowFractionFallback && normalized.contains("coma")) {
+        val parts = normalized.split(" coma ", limit = 2)
+        if (parts.size == 2) {
+            val integerPart = parseNumberPhrase(parts[0], allowFractionFallback = false)
+            val fractionalDigits = parts[1].split(" ")
+                .mapNotNull { DIGIT_WORDS[it] }
+                .joinToString("")
+            if (integerPart != null && fractionalDigits.isNotEmpty()) {
+                val fractional = ("0.$fractionalDigits").toBigDecimalOrNull()
+                if (fractional != null) {
+                    return integerPart + fractional
+                }
+            }
+        }
+    }
+
+    val sequentialDigits = normalized.split(" ")
+        .mapNotNull { DIGIT_WORDS[it] }
+        .joinToString("")
+    if (sequentialDigits.isNotEmpty()) {
+        return sequentialDigits.toBigDecimalOrNull()
+    }
+
+    return null
+}
+
+private fun convertNumberToBigDecimal(number: Number): BigDecimal? {
+    return when (number) {
+        is BigDecimal -> number
+        is android.icu.math.BigDecimal -> BigDecimal(number.toString())
+        is Long -> BigDecimal.valueOf(number)
+        is Int -> BigDecimal.valueOf(number.toLong())
+        is Double -> BigDecimal.valueOf(number)
+        is Float -> BigDecimal.valueOf(number.toDouble())
+        else -> number.toString().toBigDecimalOrNull()
     }
 }
