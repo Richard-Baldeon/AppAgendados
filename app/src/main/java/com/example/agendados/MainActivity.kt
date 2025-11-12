@@ -40,6 +40,8 @@ import androidx.core.content.ContextCompat
 import com.example.agendados.alarm.AlarmPayload
 import com.example.agendados.alarm.AlarmScheduler
 import com.example.agendados.alarm.AlarmStorage
+import com.example.agendados.home.HomeActivity
+import com.example.agendados.ui.components.HomeNavigationButton
 import com.example.agendados.ui.theme.AgendadosTheme
 import java.time.Instant
 import java.time.LocalDateTime
@@ -147,7 +149,8 @@ class MainActivity : ComponentActivity() {
                                     ).show()
                                 }
                             }
-                        }
+                        },
+                        onHomeClick = { openHome() }
                     )
                 }
             }
@@ -256,6 +259,14 @@ class MainActivity : ComponentActivity() {
         }, 500)
     }
 
+    private fun openHome() {
+        val intent = Intent(this, HomeActivity::class.java).apply {
+            addFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP)
+        }
+        startActivity(intent)
+        finish()
+    }
+
     private fun getAppVersionName(): String {
         return try {
             val packageInfo = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
@@ -288,6 +299,7 @@ fun FichaScreen(
     onCallClick: () -> Unit,
     onSelectAlarmTime: () -> Unit,
     onSaveAlarm: () -> Unit,
+    onHomeClick: () -> Unit,
     modifier: Modifier = Modifier
 ) {
     val dateFormatter = remember {
@@ -311,6 +323,11 @@ fun FichaScreen(
             .fillMaxSize()
             .padding(24.dp)
     ) {
+        HomeNavigationButton(
+            onClick = onHomeClick,
+            modifier = Modifier.align(Alignment.TopStart)
+        )
+
         Column(
             modifier = Modifier.align(Alignment.Center),
             verticalArrangement = Arrangement.spacedBy(24.dp, Alignment.CenterVertically),

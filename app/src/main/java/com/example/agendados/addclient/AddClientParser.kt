@@ -1,8 +1,47 @@
 package com.example.agendados.addclient
 
+import android.icu.text.RuleBasedNumberFormat
+import java.math.BigDecimal
 import java.text.Normalizer
 import java.time.LocalTime
 import java.util.Locale
+
+private val DIGIT_WORDS = mapOf(
+    "cero" to "0",
+    "uno" to "1",
+    "una" to "1",
+    "dos" to "2",
+    "tres" to "3",
+    "cuatro" to "4",
+    "cinco" to "5",
+    "seis" to "6",
+    "siete" to "7",
+    "ocho" to "8",
+    "nueve" to "9"
+)
+private val STOP_KEYWORDS: List<String> = listOf(
+    "fin",
+    "listo",
+    "terminar",
+    "ok",
+    "tasa",
+    "deuda",
+    "monto",
+    "saldo",
+    "comentario",
+    "comentarios",
+    "compra",
+    "traslado",
+    "celular",
+    "telefono",
+    "teléfono",
+    "nombre"
+)
+
+private val numberFormatter = RuleBasedNumberFormat(
+    Locale("es", "PE"),
+    RuleBasedNumberFormat.SPELLOUT
+)
 
 private val PHONE_REGEX = Regex("9[\\d\\s.\\-]{8,}")
 private val NUMBER_REGEX = Regex("""\\b\\d[\\d.,\\s]*\\d(?:\\s*(?:k|mil))?\\b""", RegexOption.IGNORE_CASE)
@@ -39,11 +78,26 @@ fun parseDictation(input: String): ParserResult {
     val name = detectName(input, phoneDetection?.range)
     val comment = detectComment(input)
     val monetaryMatches = NUMBER_REGEX.findAll(input)
-    var montoPP: String? = null
-    var tasaPP: String? = null
-    var deuda: String? = null
-    var montoCD: String? = null
-    var tasaCD: String? = null
+    var montoPP: String? = extractLabeledAmount(
+        input,
+        listOf("monto pp", "monto prestamo personal", "monto préstamo personal", "monto del prestamo personal")
+    )
+    var tasaPP: String? = extractLabeledRate(
+        input,
+        listOf("tasa pp", "tasa prestamo personal", "tasa préstamo personal")
+    )
+    var deuda: String? = extractLabeledAmount(
+        input,
+        listOf("deuda", "saldo pendiente", "saldo")
+    )
+    var montoCD: String? = extractLabeledAmount(
+        input,
+        listOf("monto cd", "monto compra de deuda", "compra de deuda", "monto traslado")
+    )
+    var tasaCD: String? = extractLabeledRate(
+        input,
+        listOf("tasa cd", "tasa compra de deuda", "tasa traslado")
+    )
 
     for (match in monetaryMatches) {
         val rawValue = match.value
@@ -174,14 +228,46 @@ private fun extractContext(text: String, range: IntRange): String {
 
 private fun normalizeAmount(raw: String): String {
     val lowered = raw.lowercase(Locale.getDefault()).trim()
-    val multiplier = when {
-        lowered.contains("k") || lowered.contains("mil") -> 1_000
-        else -> 1
+    if (lowered.isEmpty()) return raw.trim()
+
+    var sanitized = lowered
+        .replace("s/.", " ")
+        .replace("s/", " ")
+        .replace("soles", " ")
+        .replace("sol", " ")
+        .replace("pen", " ")
+        .replace("dolares", " ")
+        .replace("dólares", " ")
+        .replace("usd", " ")
+        .replace(Regex("\\s+"), " ")
+        .trim()
+
+    val containsDigits = sanitized.any { it.isDigit() }
+    var working = sanitized
+    var multiplier = BigDecimal.ONE
+    if (containsDigits) {
+        if (working.contains("k")) {
+            multiplier = BigDecimal(1_000)
+            working = working.replace("k", "")
+        }
+        if (Regex("\\bmil\\b").containsMatchIn(working)) {
+            multiplier = BigDecimal(1_000)
+            working = working.replace(Regex("\\bmil\\b"), "")
+        }
     }
-    val digitsOnly = lowered.replace("k", "").replace("mil", "")
-        .replace(" ", "").replace(".", "").replace(",", "")
-    val amount = digitsOnly.toBigDecimalOrNull()?.times(multiplier.toBigDecimal())
-        ?: return raw.trim()
+
+    val digitsOnly = working
+        .replace(" ", "")
+        .replace(".", "")
+        .replace(",", "")
+
+    val amountDecimal = if (containsDigits && digitsOnly.any { it.isDigit() }) {
+        digitsOnly.toBigDecimalOrNull()?.multiply(multiplier)
+    } else {
+        parseNumberPhrase(working)?.multiply(multiplier)
+    }
+
+    val amount = amountDecimal ?: return raw.trim()
     val rounded = amount.setScale(0, java.math.RoundingMode.HALF_UP)
     return try {
         formatAmount(rounded.toBigInteger().longValueExact())
@@ -196,11 +282,42 @@ private fun formatAmount(value: Long): String {
 }
 
 private fun normalizeRate(raw: String): String {
-    val cleaned = raw.replace("%", "").replace(" ", "")
-        .replace(",", ".")
-    val number = cleaned.toBigDecimalOrNull() ?: return raw.trim()
-    val normalized = number.stripTrailingZeros().toPlainString()
+    val lowered = raw.lowercase(Locale.getDefault())
+    val cleaned = lowered
+        .replace("%", "")
+        .replace("porciento", "")
+        .replace("por ciento", "")
+        .replace("porcentaje", "")
+        .replace("por cien", "")
+        .replace(Regex("\\s+"), " ")
+        .trim()
+
+    val numericCandidate = cleaned
+        .replace("punto", ".")
+        .replace("coma", ".")
+        .replace(" ", "")
+
+    val decimal = numericCandidate.toBigDecimalOrNull()
+        ?: parseNumberPhrase(cleaned)
+        ?: return raw.trim()
+
+    val bounded = when {
+        decimal < BigDecimal.ZERO -> BigDecimal.ZERO
+        decimal > BigDecimal("200") -> BigDecimal("200")
+        else -> decimal
+    }
+    val normalized = bounded.stripTrailingZeros().toPlainString()
     return "$normalized%"
+}
+
+private fun extractLabeledAmount(input: String, labels: List<String>): String? {
+    val raw = extractValueAfterLabels(input, labels) ?: return null
+    return normalizeAmount(raw)
+}
+
+private fun extractLabeledRate(input: String, labels: List<String>): String? {
+    val raw = extractValueAfterLabels(input, labels) ?: return null
+    return normalizeRate(raw)
 }
 
 private fun detectTime(input: String): LocalTime? {
@@ -227,5 +344,113 @@ private fun detectTime(input: String): LocalTime? {
         else -> {
             LocalTime.of(hour % 12, minute.coerceIn(0, 59))
         }
+    }
+}
+
+private fun extractValueAfterLabels(input: String, labels: List<String>): String? {
+    val normalizedInput = normalizeText(input)
+    for (label in labels) {
+        val normalizedLabel = normalizeText(label)
+        val index = normalizedInput.indexOf(normalizedLabel)
+        if (index >= 0) {
+            val start = index + normalizedLabel.length
+            if (start >= input.length) continue
+            val tail = input.substring(start)
+            val cleaned = tail.trimStart(' ', ':', '-', '—', '=', '.', ',', ';')
+            val extracted = cleaned.takeUntilStop()
+            if (extracted.isNotBlank()) {
+                return extracted.trim()
+            }
+        }
+    }
+    return null
+}
+
+private fun String.takeUntilStop(): String {
+    if (isEmpty()) return this
+    var end = length
+    val normalized = normalizeText(this)
+    val texto = this
+    STOP_KEYWORDS.forEach { kw: String ->
+        val idxOriginal = texto.indexOf(kw, startIndex = 0, ignoreCase = true)
+        val idxNormalized = normalized.indexOf(kw, startIndex = 0, ignoreCase = true)
+        val idx = listOf(idxOriginal, idxNormalized)
+            .filter { it >= 0 }
+            .minOrNull()
+        if (idx != null && idx in 0 until end) {
+            end = idx
+        }
+    }
+    val newlineIndex = indexOf('\n')
+    if (newlineIndex in 0 until end) end = newlineIndex
+    val semicolonIndex = indexOf(';')
+    if (semicolonIndex in 0 until end) end = semicolonIndex
+    val colonIndex = indexOf(':')
+    if (colonIndex in 0 until end) end = colonIndex
+    for (i in 0 until end) {
+        val ch = this[i]
+        if ((ch == ',' || ch == '.') && getOrNull(i + 1)?.isDigit() != true) {
+            end = i
+            break
+        }
+    }
+    val trimmedEnd = end.coerceIn(0, length)
+    return substring(0, trimmedEnd).trimEnd(',', '.', '-', ':', ' ')
+}
+
+private fun parseNumberPhrase(text: String, allowFractionFallback: Boolean = true): BigDecimal? {
+    val sanitized = text
+        .replace('-', ' ')
+        .replace(Regex("\s+"), " ")
+        .trim()
+    if (sanitized.isEmpty()) return null
+
+    val normalized = sanitized
+        .replace("punto", " coma ")
+        .replace(",", " coma ")
+        .replace(Regex("\s+"), " ")
+        .trim()
+
+    val parsed = runCatching { numberFormatter.parse(normalized) }.getOrNull()
+    val decimal = parsed?.let { convertNumberToBigDecimal(it) }
+    if (decimal != null) {
+        return decimal
+    }
+
+    if (allowFractionFallback && normalized.contains("coma")) {
+        val parts = normalized.split(" coma ", limit = 2)
+        if (parts.size == 2) {
+            val integerPart = parseNumberPhrase(parts[0], allowFractionFallback = false)
+            val fractionalDigits = parts[1].split(" ")
+                .mapNotNull { DIGIT_WORDS[it] }
+                .joinToString("")
+            if (integerPart != null && fractionalDigits.isNotEmpty()) {
+                val fractional = ("0.$fractionalDigits").toBigDecimalOrNull()
+                if (fractional != null) {
+                    return integerPart + fractional
+                }
+            }
+        }
+    }
+
+    val sequentialDigits = normalized.split(" ")
+        .mapNotNull { DIGIT_WORDS[it] }
+        .joinToString("")
+    if (sequentialDigits.isNotEmpty()) {
+        return sequentialDigits.toBigDecimalOrNull()
+    }
+
+    return null
+}
+
+private fun convertNumberToBigDecimal(number: Number): BigDecimal? {
+    return when (number) {
+        is BigDecimal -> number
+        is android.icu.math.BigDecimal -> BigDecimal(number.toString())
+        is Long -> BigDecimal.valueOf(number)
+        is Int -> BigDecimal.valueOf(number.toLong())
+        is Double -> BigDecimal.valueOf(number)
+        is Float -> BigDecimal.valueOf(number.toDouble())
+        else -> number.toString().toBigDecimalOrNull()
     }
 }

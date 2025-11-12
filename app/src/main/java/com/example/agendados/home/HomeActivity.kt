@@ -28,6 +28,7 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import com.example.agendados.R
 import com.example.agendados.addclient.AddClientActivity
+import com.example.agendados.iterate.IterateActivity
 import com.example.agendados.ui.theme.AgendadosTheme
 
 class HomeActivity : ComponentActivity() {
@@ -39,7 +40,7 @@ class HomeActivity : ComponentActivity() {
                 HomeScreen(
                     onAddClick = { openAddClient() },
                     onEliminarClick = { showComingSoonToast(R.string.home_option_delete) },
-                    onIterarClick = { showComingSoonToast(R.string.home_option_iterate) },
+                    onIterarClick = { openIterate() },
                     onTicketClick = { showComingSoonToast(R.string.home_option_ticket) }
                 )
             }
@@ -48,6 +49,10 @@ class HomeActivity : ComponentActivity() {
 
     private fun openAddClient() {
         startActivity(Intent(this, AddClientActivity::class.java))
+    }
+
+    private fun openIterate() {
+        startActivity(Intent(this, IterateActivity::class.java))
     }
 
     private fun showComingSoonToast(optionRes: Int) {
