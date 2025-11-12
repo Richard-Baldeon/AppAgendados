@@ -35,6 +35,17 @@
     <string name="notification_permission_required">Activa las notificaciones para recibir las alarmas.</string>
     <string name="add_client_title">Añadir Cliente</string>
     <string name="mic_button_content_description">Dictar datos del cliente</string>
+    <string name="home_title">¿Qué deseas hacer hoy?</string>
+    <string name="home_subtitle">Selecciona una opción para continuar.</string>
+    <string name="home_option_add">Añadir cliente</string>
+    <string name="home_option_add_description">Registra un nuevo cliente en tu agenda.</string>
+    <string name="home_option_delete">Eliminar cliente</string>
+    <string name="home_option_iterate">Iterar cartera</string>
+    <string name="home_option_ticket">Generar ticket</string>
+    <string name="home_option_pending">Próximamente disponible</string>
+    <string name="home_option_coming_soon">La opción %1$s estará disponible pronto.</string>
+    <string name="home_button_label">Inicio</string>
+    <string name="home_button_content_description">Volver al inicio</string>
     <string name="field_celular">Celular</string>
     <string name="field_nombre">Nombre</string>
     <string name="field_monto_pp">Monto PP</string>
