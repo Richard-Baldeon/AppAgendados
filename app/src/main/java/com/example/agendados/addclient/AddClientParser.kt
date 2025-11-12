@@ -14,25 +14,7 @@ private val NAME_KEYWORD_REGEX = Regex("(?i)(?:nombre|se llama|cliente)\\s*[:\\-
 private val TIME_REGEX = Regex("""(?i)\\b(\\d{1,2})(?::(\\d{2}))?\\s*(a\\.?m\\.?|p\\.?m\\.?|am|pm)?\\b""")
 private val AM_PM_ONLY_REGEX = Regex("(?i)\\b(?:am|pm|a\\.?m\\.?|p\\.?m\\.?)\\b")
 private val CD_REGEX = Regex("\\bcd\\b")
-private val STOP_KEYWORDS = listOf("tasa", "deuda", "monto", "saldo", "comentario", "comentarios", "compra", "traslado", "celular", "telefono", "teléfono", "nombre")
-
-private val numberFormatter by lazy(LazyThreadSafetyMode.SYNCHRONIZED) {
-    RuleBasedNumberFormat(Locale("es", "PE"), RuleBasedNumberFormat.SPELLOUT)
-}
-
-private val DIGIT_WORDS = mapOf(
-    "cero" to '0',
-    "uno" to '1',
-    "una" to '1',
-    "dos" to '2',
-    "tres" to '3',
-    "cuatro" to '4',
-    "cinco" to '5',
-    "seis" to '6',
-    "siete" to '7',
-    "ocho" to '8',
-    "nueve" to '9'
-)
+private const val NUMBER_CAPTURE_PATTERN = "\\d[\\d.,\\s]*\\d?(?:\\s*(?:k|mil))?"
 
 private val INVALID_NAME_TOKENS = setOf("celular", "telefono", "teléfono", "numero", "número", "es")
 
@@ -211,46 +193,23 @@ private fun extractContext(text: String, range: IntRange): String {
 
 private fun normalizeAmount(raw: String): String {
     val lowered = raw.lowercase(Locale.getDefault()).trim()
-    if (lowered.isEmpty()) return raw.trim()
-
-    var sanitized = lowered
-        .replace("s/.", " ")
-        .replace("s/", " ")
-        .replace("soles", " ")
-        .replace("sol", " ")
-        .replace("pen", " ")
-        .replace("dolares", " ")
-        .replace("dólares", " ")
-        .replace("usd", " ")
-        .replace(Regex("\\s+"), " ")
-        .trim()
-
-    val containsDigits = sanitized.any { it.isDigit() }
-    var working = sanitized
-    var multiplier = BigDecimal.ONE
-    if (containsDigits) {
-        if (working.contains("k")) {
-            multiplier = BigDecimal(1_000)
-            working = working.replace("k", "")
-        }
-        if (Regex("\\bmil\\b").containsMatchIn(working)) {
-            multiplier = BigDecimal(1_000)
-            working = working.replace(Regex("\\bmil\\b"), "")
-        }
+    val sanitizedCurrency = lowered
+        .replace("s/.", "")
+        .replace("s/", "")
+        .replace("soles", "")
+        .replace("sol", "")
+        .replace("pen", "")
+        .replace("dolares", "")
+        .replace("dólares", "")
+        .replace("usd", "")
+    val multiplier = when {
+        sanitizedCurrency.contains("k") || sanitizedCurrency.contains("mil") -> 1_000
+        else -> 1
     }
-
-    val digitsOnly = working
-        .replace(" ", "")
-        .replace(".", "")
-        .replace(",", "")
-
-    val amountDecimal = if (containsDigits && digitsOnly.any { it.isDigit() }) {
-        digitsOnly.toBigDecimalOrNull()?.multiply(multiplier)
-    } else {
-        parseNumberPhrase(working)?.multiply(multiplier)
-    }
-
-    val amount = amountDecimal ?: return raw.trim()
+    val digitsOnly = sanitizedCurrency.replace("k", "").replace("mil", "")
+        .replace(" ", "").replace(".", "").replace(",", "")
+    val amount = digitsOnly.toBigDecimalOrNull()?.times(multiplier.toBigDecimal())
+        ?: return raw.trim()
     val rounded = amount.setScale(0, java.math.RoundingMode.HALF_UP)
     return try {
         formatAmount(rounded.toBigInteger().longValueExact())
@@ -271,36 +230,35 @@ private fun normalizeRate(raw: String): String {
         .replace("porciento", "")
         .replace("por ciento", "")
         .replace("porcentaje", "")
-        .replace("por cien", "")
-        .replace(Regex("\\s+"), " ")
-        .trim()
-
-    val numericCandidate = cleaned
-        .replace("punto", ".")
-        .replace("coma", ".")
         .replace(" ", "")
-
-    val decimal = numericCandidate.toBigDecimalOrNull()
-        ?: parseNumberPhrase(cleaned)
-        ?: return raw.trim()
-
-    val bounded = when {
-        decimal < BigDecimal.ZERO -> BigDecimal.ZERO
-        decimal > BigDecimal("200") -> BigDecimal("200")
-        else -> decimal
-    }
-    val normalized = bounded.stripTrailingZeros().toPlainString()
+        .replace(",", ".")
+    val number = cleaned.toBigDecimalOrNull() ?: return raw.trim()
+    val normalized = number.stripTrailingZeros().toPlainString()
     return "$normalized%"
 }
 
 private fun extractLabeledAmount(input: String, labels: List<String>): String? {
-    val raw = extractValueAfterLabels(input, labels) ?: return null
+    val regex = buildLabeledNumberRegex(labels, allowCurrencyPrefix = true)
+    val match = regex.find(input) ?: return null
+    val raw = match.groupValues[1].trim()
+    if (raw.isEmpty()) return null
     return normalizeAmount(raw)
 }
 
 private fun extractLabeledRate(input: String, labels: List<String>): String? {
-    val raw = extractValueAfterLabels(input, labels) ?: return null
+    val regex = buildLabeledNumberRegex(labels, allowCurrencyPrefix = false)
+    val match = regex.find(input) ?: return null
+    val raw = match.groupValues[1].trim()
+    if (raw.isEmpty()) return null
     return normalizeRate(raw)
+}
+
+private fun buildLabeledNumberRegex(labels: List<String>, allowCurrencyPrefix: Boolean): Regex {
+    val labelPattern = labels.joinToString("|") { label ->
+        label.trim().split(" ").joinToString("\\s+") { Regex.escape(it) }
+    }
+    val prefix = if (allowCurrencyPrefix) "(?:s\\s*/\\.?\\s*)?" else ""
+    return Regex("(?i)(?:$labelPattern)\\s*[:\\-]?\\s*$prefix($NUMBER_CAPTURE_PATTERN)")
 }
 
 private fun detectTime(input: String): LocalTime? {

@@ -73,9 +73,7 @@ import java.util.Locale
 @Composable
 fun AddClientActivityContent(onHomeClick: () -> Unit) {
     AgendadosTheme(darkTheme = false, dynamicColor = false) {
-        val context = LocalContext.current
-        val repository = remember { ClientRepository.getInstance(context.applicationContext) }
-        val viewModel: AddClientViewModel = viewModel(factory = AddClientViewModelFactory(repository))
+        val viewModel: AddClientViewModel = viewModel(factory = AddClientViewModelFactory())
         AddClientRoute(
             viewModel = viewModel,
             onHomeClick = onHomeClick
@@ -254,14 +252,7 @@ fun AddClientRoute(
                 alertReason = reason
             }
         },
-        onHomeClick = onHomeClick,
-        isListening = isListening,
-        isMicEnabled = speechAvailable,
-        listeningMessage = when {
-            !speechAvailable -> context.getString(R.string.no_speech_recognizer)
-            isListening -> context.getString(R.string.speech_listening_indicator)
-            else -> context.getString(R.string.speech_tap_to_start)
-        }
+        onHomeClick = onHomeClick
     )
 
     if (alertReason != null) {
@@ -300,9 +291,6 @@ fun AddClientScreen(
     onPeriodChange: (Boolean) -> Unit,
     onConfirm: () -> Unit,
     onHomeClick: () -> Unit,
-    isListening: Boolean,
-    isMicEnabled: Boolean,
-    listeningMessage: String,
     modifier: Modifier = Modifier
 ) {
     val scrollState = rememberScrollState()
