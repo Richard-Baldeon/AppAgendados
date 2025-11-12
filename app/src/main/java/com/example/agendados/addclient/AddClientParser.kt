@@ -7,6 +7,43 @@ import java.time.LocalTime
 import java.util.Locale
 import kotlin.LazyThreadSafetyMode
 
+private val DIGIT_WORDS = mapOf(
+    "cero" to "0",
+    "uno" to "1",
+    "una" to "1",
+    "dos" to "2",
+    "tres" to "3",
+    "cuatro" to "4",
+    "cinco" to "5",
+    "seis" to "6",
+    "siete" to "7",
+    "ocho" to "8",
+    "nueve" to "9"
+)
+private val STOP_KEYWORDS: List<String> = listOf(
+    "fin",
+    "listo",
+    "terminar",
+    "ok",
+    "tasa",
+    "deuda",
+    "monto",
+    "saldo",
+    "comentario",
+    "comentarios",
+    "compra",
+    "traslado",
+    "celular",
+    "telefono",
+    "teléfono",
+    "nombre"
+)
+
+private val numberFormatter = RuleBasedNumberFormat(
+    Locale("es", "PE"),
+    RuleBasedNumberFormat.SPELLOUT
+)
+
 private val PHONE_REGEX = Regex("9[\\d\\s.\\-]{8,}")
 private val NUMBER_REGEX = Regex("""\\b\\d[\\d.,\\s]*\\d(?:\\s*(?:k|mil))?\\b""", RegexOption.IGNORE_CASE)
 private val COMMENT_REGEX = Regex("(?i)comentarios?:\\s*(.*)")

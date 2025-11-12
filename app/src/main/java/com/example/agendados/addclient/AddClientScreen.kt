@@ -294,6 +294,7 @@ fun AddClientScreen(
     modifier: Modifier = Modifier
 ) {
     val scrollState = rememberScrollState()
+    val displayListeningMessage = listeningMessage ?: stringResource(R.string.listening_message)
     Column(
         modifier
             .fillMaxSize()
