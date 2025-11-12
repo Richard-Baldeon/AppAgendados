@@ -15,6 +15,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
+import com.example.agendados.ui.components.HomeNavigationButton
 
 @Composable
 fun AlarmScreen(
@@ -23,48 +24,57 @@ fun AlarmScreen(
     phoneNumber: String,
     onSnooze: () -> Unit,
     onDismiss: () -> Unit,
-    onCall: () -> Unit
+    onCall: () -> Unit,
+    onHome: () -> Unit
 ) {
     Surface(modifier = Modifier.fillMaxSize()) {
         Column(
             modifier = Modifier
                 .fillMaxSize()
-                .padding(24.dp),
-            verticalArrangement = Arrangement.spacedBy(24.dp, Alignment.CenterVertically),
-            horizontalAlignment = Alignment.CenterHorizontally
+                .padding(24.dp)
         ) {
-            Text(
-                text = stringResource(id = R.string.alarm_screen_title),
-                style = MaterialTheme.typography.headlineSmall,
-                textAlign = TextAlign.Center
-            )
-            Text(
-                text = stringResource(id = R.string.alarm_message_name, contactName),
-                style = MaterialTheme.typography.bodyLarge,
-                textAlign = TextAlign.Center
-            )
-            Text(
-                text = stringResource(id = R.string.alarm_message_amount, amount),
-                style = MaterialTheme.typography.bodyLarge,
-                textAlign = TextAlign.Center
-            )
-            Text(
-                text = stringResource(id = R.string.alarm_phone_number_label, phoneNumber),
-                style = MaterialTheme.typography.bodyMedium,
-                textAlign = TextAlign.Center
-            )
+            HomeNavigationButton(onClick = onHome)
+
             Column(
-                verticalArrangement = Arrangement.spacedBy(12.dp),
+                modifier = Modifier
+                    .weight(1f)
+                    .fillMaxWidth(),
+                verticalArrangement = Arrangement.spacedBy(24.dp, Alignment.CenterVertically),
                 horizontalAlignment = Alignment.CenterHorizontally
             ) {
-                OutlinedButton(onClick = onSnooze) {
-                    Text(text = stringResource(id = R.string.snooze_button))
-                }
-                OutlinedButton(onClick = onDismiss) {
-                    Text(text = stringResource(id = R.string.dismiss_button))
-                }
-                Button(onClick = onCall) {
-                    Text(text = stringResource(id = R.string.call_button))
+                Text(
+                    text = stringResource(id = R.string.alarm_screen_title),
+                    style = MaterialTheme.typography.headlineSmall,
+                    textAlign = TextAlign.Center
+                )
+                Text(
+                    text = stringResource(id = R.string.alarm_message_name, contactName),
+                    style = MaterialTheme.typography.bodyLarge,
+                    textAlign = TextAlign.Center
+                )
+                Text(
+                    text = stringResource(id = R.string.alarm_message_amount, amount),
+                    style = MaterialTheme.typography.bodyLarge,
+                    textAlign = TextAlign.Center
+                )
+                Text(
+                    text = stringResource(id = R.string.alarm_phone_number_label, phoneNumber),
+                    style = MaterialTheme.typography.bodyMedium,
+                    textAlign = TextAlign.Center
+                )
+                Column(
+                    verticalArrangement = Arrangement.spacedBy(12.dp),
+                    horizontalAlignment = Alignment.CenterHorizontally
+                ) {
+                    OutlinedButton(onClick = onSnooze) {
+                        Text(text = stringResource(id = R.string.snooze_button))
+                    }
+                    OutlinedButton(onClick = onDismiss) {
+                        Text(text = stringResource(id = R.string.dismiss_button))
+                    }
+                    Button(onClick = onCall) {
+                        Text(text = stringResource(id = R.string.call_button))
+                    }
                 }
             }
         }
