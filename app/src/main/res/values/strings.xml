@@ -63,4 +63,6 @@
     <string name="tomorrow_label">mañana</string>
     <string name="audio_permission_required">Activa el permiso de micrófono.</string>
     <string name="no_speech_recognizer">No se encontró el reconocedor de voz.</string>
+    <string name="home_button_content_description">Ir a Inicio</string>
+    <string name="home_button_label">Inicio</string>
 </resources>

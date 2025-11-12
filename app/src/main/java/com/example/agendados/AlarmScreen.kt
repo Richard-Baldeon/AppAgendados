@@ -44,32 +44,6 @@ fun AlarmScreen(
                 verticalArrangement = Arrangement.spacedBy(24.dp, Alignment.CenterVertically),
                 horizontalAlignment = Alignment.CenterHorizontally
             ) {
-            Text(
-                text = stringResource(id = R.string.alarm_screen_title),
-                style = MaterialTheme.typography.headlineSmall,
-                textAlign = TextAlign.Center
-            )
-            Text(
-                text = stringResource(id = R.string.alarm_message_name, contactName),
-                style = MaterialTheme.typography.bodyLarge,
-                textAlign = TextAlign.Center
-            )
-            Text(
-                text = stringResource(id = R.string.alarm_message_amount, amount),
-                style = MaterialTheme.typography.bodyLarge,
-                textAlign = TextAlign.Center
-            )
-            Text(
-                text = stringResource(id = R.string.alarm_phone_number_label, phoneNumber),
-                style = MaterialTheme.typography.bodyMedium,
-                textAlign = TextAlign.Center
-            )
-
-            Column(
-                modifier = Modifier.align(Alignment.Center),
-                verticalArrangement = Arrangement.spacedBy(24.dp, Alignment.CenterVertically),
-                horizontalAlignment = Alignment.CenterHorizontally
-            ) {
                 Text(
                     text = stringResource(id = R.string.alarm_screen_title),
                     style = MaterialTheme.typography.headlineSmall,
@@ -90,18 +64,53 @@ fun AlarmScreen(
                     style = MaterialTheme.typography.bodyMedium,
                     textAlign = TextAlign.Center
                 )
-                Column(
-                    verticalArrangement = Arrangement.spacedBy(12.dp),
-                    horizontalAlignment = Alignment.CenterHorizontally
-                ) {
-                    OutlinedButton(onClick = onSnooze) {
-                        Text(text = stringResource(id = R.string.snooze_button))
-                    }
-                    OutlinedButton(onClick = onDismiss) {
-                        Text(text = stringResource(id = R.string.dismiss_button))
-                    }
-                    Button(onClick = onCall) {
-                        Text(text = stringResource(id = R.string.call_button))
+
+                Box(modifier = Modifier.fillMaxSize()) {
+                    Column(
+                        modifier = Modifier.align(Alignment.Center), // aquí SÍ es válido
+                        verticalArrangement = Arrangement.spacedBy(
+                            24.dp,
+                            Alignment.CenterVertically
+                        ),
+                        horizontalAlignment = Alignment.CenterHorizontally
+                    ) {
+                        Text(
+                            text = stringResource(id = R.string.alarm_screen_title),
+                            style = MaterialTheme.typography.headlineSmall,
+                            textAlign = TextAlign.Center
+                        )
+                        Text(
+                            text = stringResource(id = R.string.alarm_message_name, contactName),
+                            style = MaterialTheme.typography.bodyLarge,
+                            textAlign = TextAlign.Center
+                        )
+                        Text(
+                            text = stringResource(id = R.string.alarm_message_amount, amount),
+                            style = MaterialTheme.typography.bodyLarge,
+                            textAlign = TextAlign.Center
+                        )
+                        Text(
+                            text = stringResource(
+                                id = R.string.alarm_phone_number_label,
+                                phoneNumber
+                            ),
+                            style = MaterialTheme.typography.bodyMedium,
+                            textAlign = TextAlign.Center
+                        )
+                        Column(
+                            verticalArrangement = Arrangement.spacedBy(12.dp),
+                            horizontalAlignment = Alignment.CenterHorizontally
+                        ) {
+                            OutlinedButton(onClick = onSnooze) {
+                                Text(text = stringResource(id = R.string.snooze_button))
+                            }
+                            OutlinedButton(onClick = onDismiss) {
+                                Text(text = stringResource(id = R.string.dismiss_button))
+                            }
+                            Button(onClick = onCall) {
+                                Text(text = stringResource(id = R.string.call_button))
+                            }
+                        }
                     }
                 }
             }
