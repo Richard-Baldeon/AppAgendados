@@ -2,15 +2,20 @@ package com.example.agendados.addclient
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
+import com.example.agendados.data.ClientRecord
+import com.example.agendados.data.ClientRepository
+import java.time.Clock
+import java.time.LocalDate
+import java.time.LocalTime
+import java.util.Locale
+import java.util.UUID
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
-import java.time.Clock
-import java.time.LocalTime
-import java.util.Locale
 
 class AddClientViewModel(
+    private val repository: ClientRepository,
     private val clock: Clock = Clock.system(LimaZone),
     private val holidayCalendar: HolidayCalendar = PeruHolidayCalendar
 ) : ViewModel() {
@@ -90,6 +95,45 @@ class AddClientViewModel(
         }
     }
 
+    fun saveCurrentClient(): SaveResult {
+        val state = _uiState.value
+        val errors = mutableListOf<SaveValidationError>()
+        val sanitizedPhone = state.celular.filter { it.isDigit() }
+        if (state.nombre.isBlank()) {
+            errors += SaveValidationError.MissingName
+        }
+        if (sanitizedPhone.length != 9) {
+            errors += SaveValidationError.InvalidPhone
+        }
+
+        if (errors.isNotEmpty()) {
+            return SaveResult.ValidationError(errors)
+        }
+
+        val date = selectedDate(state)
+        val time = toLocalTime(state)
+        val existing = repository.findByPhone(sanitizedPhone)
+        val recordId = existing?.id ?: UUID.randomUUID().toString()
+
+        val record = ClientRecord(
+            id = recordId,
+            createdAtMillis = existing?.createdAtMillis ?: System.currentTimeMillis(),
+            nombre = state.nombre,
+            celular = sanitizedPhone,
+            montoPP = state.montoPP,
+            tasaPP = state.tasaPP,
+            deuda = state.deuda,
+            montoCD = state.montoCD,
+            tasaCD = state.tasaCD,
+            comentarios = state.comentarios,
+            scheduledDate = date,
+            scheduledTime = time
+        )
+        repository.addOrUpdate(record)
+
+        return SaveResult.Success(recordId)
+    }
+
     fun onDateSelected(index: Int) {
         _uiState.update { state ->
             val clamped = index.coerceIn(0, state.dateOptions.lastIndex)
@@ -133,6 +177,11 @@ class AddClientViewModel(
         return LocalTime.of(hour24, state.minute)
     }
 
+    private fun selectedDate(state: AddClientUiState): LocalDate {
+        return state.dateOptions.getOrNull(state.selectedDateIndex)
+            ?: computeDefaultScheduleDate(clock, holidayCalendar)
+    }
+
     private fun AddClientUiState.withTimeFromDictation(time: LocalTime?): AddClientUiState {
         time ?: return this
         val hour = when (time.hour) {
@@ -156,14 +205,25 @@ enum class ScheduleAlertReason(val reasonText: String) {
 }
 
 class AddClientViewModelFactory(
+    private val repository: ClientRepository,
     private val clock: Clock = Clock.system(LimaZone),
     private val holidayCalendar: HolidayCalendar = PeruHolidayCalendar
 ) : ViewModelProvider.Factory {
     @Suppress("UNCHECKED_CAST")
     override fun <T : ViewModel> create(modelClass: Class<T>): T {
         if (modelClass.isAssignableFrom(AddClientViewModel::class.java)) {
-            return AddClientViewModel(clock, holidayCalendar) as T
+            return AddClientViewModel(repository, clock, holidayCalendar) as T
         }
         throw IllegalArgumentException("Unknown ViewModel class")
     }
+}
+
+sealed class SaveResult {
+    data class Success(val recordId: String) : SaveResult()
+    data class ValidationError(val errors: List<SaveValidationError>) : SaveResult()
+}
+
+enum class SaveValidationError {
+    MissingName,
+    InvalidPhone
 }
