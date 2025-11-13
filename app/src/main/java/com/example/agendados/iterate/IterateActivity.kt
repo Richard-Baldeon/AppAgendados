@@ -1,30 +1,38 @@
 package com.example.agendados.iterate
 
 import android.content.Intent
+import android.net.Uri
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.weight
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.items
-import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material3.Card
-import androidx.compose.material3.CardDefaults
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
+import androidx.compose.material3.Button
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedButton
+import androidx.compose.material3.FloatingActionButton
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.rounded.Phone
+import androidx.compose.material3.Icon
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.remember
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
@@ -37,8 +45,6 @@ import com.example.agendados.data.ClientRepository
 import com.example.agendados.home.HomeActivity
 import com.example.agendados.ui.components.HomeNavigationButton
 import com.example.agendados.ui.theme.AgendadosTheme
-import java.time.format.DateTimeFormatter
-import java.util.Locale
 
 class IterateActivity : ComponentActivity() {
 
@@ -51,8 +57,8 @@ class IterateActivity : ComponentActivity() {
                 val clients by repository.clients.collectAsState()
                 IterateScreen(
                     clients = clients,
-                    onClientClick = { openDetail(it.id) },
-                    onHomeClick = { openHome() }
+                    onHomeClick = { openHome() },
+                    onCallClick = { startDial(it) }
                 )
             }
         }
@@ -66,125 +72,129 @@ class IterateActivity : ComponentActivity() {
         finish()
     }
 
-    private fun openDetail(clientId: String) {
-        val intent = Intent(this, ClientDetailActivity::class.java).putExtra(ClientDetailActivity.EXTRA_CLIENT_ID, clientId)
-        startActivity(intent)
+    private fun startDial(phone: String) {
+        val digits = phone.filter { it.isDigit() }
+        if (digits.isEmpty()) return
+        val uri = Uri.parse("tel:$digits")
+        startActivity(Intent(Intent.ACTION_DIAL, uri))
     }
 }
 
 @Composable
 fun IterateScreen(
     clients: List<ClientRecord>,
-    onClientClick: (ClientRecord) -> Unit,
     onHomeClick: () -> Unit,
+    onCallClick: (String) -> Unit,
     modifier: Modifier = Modifier
 ) {
-    Surface(color = MaterialTheme.colorScheme.background, modifier = modifier.fillMaxSize()) {
-        val dateFormatter = rememberDateFormatter()
-        val timeFormatter = rememberTimeFormatter()
-        Column(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(horizontal = 24.dp, vertical = 32.dp),
-            verticalArrangement = Arrangement.spacedBy(24.dp)
-        ) {
-            HomeNavigationButton(onClick = onHomeClick)
-            Column(horizontalAlignment = Alignment.CenterHorizontally, modifier = Modifier.fillMaxWidth()) {
-                Text(
-                    text = stringResource(id = R.string.iterate_title),
-                    style = MaterialTheme.typography.headlineSmall,
-                    fontWeight = FontWeight.Bold,
-                    textAlign = TextAlign.Center
-                )
-                Spacer(modifier = Modifier.height(8.dp))
-                Text(
-                    text = stringResource(id = R.string.iterate_subtitle),
-                    style = MaterialTheme.typography.bodyMedium,
-                    textAlign = TextAlign.Center
-                )
-            }
-
+    Surface(modifier = modifier.fillMaxSize(), color = MaterialTheme.colorScheme.background) {
+        var currentIndex by rememberSaveable { mutableStateOf(0) }
+        LaunchedEffect(clients.size) {
             if (clients.isEmpty()) {
-                Spacer(modifier = Modifier.height(16.dp))
-                Text(
-                    text = stringResource(id = R.string.iterate_empty_message),
-                    style = MaterialTheme.typography.bodyMedium,
-                    textAlign = TextAlign.Center,
-                    modifier = Modifier.fillMaxWidth()
-                )
-            } else {
-                LazyColumn(
-                    modifier = Modifier.fillMaxSize(),
-                    verticalArrangement = Arrangement.spacedBy(16.dp),
-                    contentPadding = PaddingValues(bottom = 32.dp)
-                ) {
-                    items(clients) { client ->
-                        IterateListItem(
-                            record = client,
-                            dateFormatter = dateFormatter,
-                            timeFormatter = timeFormatter,
-                            onClick = { onClientClick(client) }
+                currentIndex = 0
+            } else if (currentIndex > clients.lastIndex) {
+                currentIndex = clients.lastIndex
+            }
+        }
+
+        Box(modifier = Modifier.fillMaxSize()) {
+            Column(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .padding(horizontal = 24.dp, vertical = 32.dp),
+                verticalArrangement = Arrangement.spacedBy(24.dp)
+            ) {
+                HomeNavigationButton(onClick = onHomeClick)
+                Column(horizontalAlignment = Alignment.CenterHorizontally, modifier = Modifier.fillMaxWidth()) {
+                    Text(
+                        text = stringResource(id = R.string.iterate_title),
+                        style = MaterialTheme.typography.headlineSmall,
+                        fontWeight = FontWeight.Bold,
+                        textAlign = TextAlign.Center
+                    )
+                    Spacer(modifier = Modifier.height(8.dp))
+                    Text(
+                        text = stringResource(id = R.string.iterate_subtitle),
+                        style = MaterialTheme.typography.bodyMedium,
+                        textAlign = TextAlign.Center
+                    )
+                }
+
+                if (clients.isEmpty()) {
+                    Spacer(modifier = Modifier.height(16.dp))
+                    Text(
+                        text = stringResource(id = R.string.iterate_empty_message),
+                        style = MaterialTheme.typography.bodyMedium,
+                        textAlign = TextAlign.Center,
+                        modifier = Modifier.fillMaxWidth()
+                    )
+                } else {
+                    val record = clients[currentIndex]
+                    val scrollState = rememberScrollState()
+                    Text(
+                        text = stringResource(
+                            id = R.string.iterate_position_indicator,
+                            currentIndex + 1,
+                            clients.size
+                        ),
+                        style = MaterialTheme.typography.bodyMedium,
+                        fontWeight = FontWeight.SemiBold,
+                        modifier = Modifier.fillMaxWidth(),
+                        textAlign = TextAlign.Center
+                    )
+                    Column(
+                        modifier = Modifier
+                            .weight(1f)
+                            .fillMaxWidth()
+                            .verticalScroll(scrollState),
+                        verticalArrangement = Arrangement.spacedBy(20.dp)
+                    ) {
+                        ClientDetailCard(
+                            record = record,
+                            modifier = Modifier.fillMaxWidth()
                         )
                     }
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.spacedBy(16.dp)
+                    ) {
+                        OutlinedButton(
+                            onClick = { if (currentIndex > 0) currentIndex-- },
+                            enabled = currentIndex > 0,
+                            modifier = Modifier.weight(1f)
+                        ) {
+                            Text(text = stringResource(id = R.string.iterate_previous_button))
+                        }
+                        Button(
+                            onClick = { if (currentIndex < clients.lastIndex) currentIndex++ },
+                            enabled = currentIndex < clients.lastIndex,
+                            modifier = Modifier.weight(1f)
+                        ) {
+                            Text(
+                                text = stringResource(id = R.string.iterate_next_button),
+                                fontWeight = FontWeight.SemiBold
+                            )
+                        }
+                    }
+                }
+            }
+
+            val activeRecord = clients.getOrNull(currentIndex)
+            if (activeRecord != null && activeRecord.celular.isNotBlank()) {
+                FloatingActionButton(
+                    onClick = { onCallClick(activeRecord.celular) },
+                    containerColor = MaterialTheme.colorScheme.primary,
+                    modifier = Modifier
+                        .align(Alignment.TopEnd)
+                        .padding(top = 32.dp, end = 24.dp)
+                ) {
+                    Icon(
+                        imageVector = Icons.Rounded.Phone,
+                        contentDescription = stringResource(id = R.string.call_button),
+                        tint = MaterialTheme.colorScheme.onPrimary
+                    )
                 }
             }
         }
     }
-}
-
-@Composable
-private fun IterateListItem(
-    record: ClientRecord,
-    dateFormatter: DateTimeFormatter,
-    timeFormatter: DateTimeFormatter,
-    onClick: () -> Unit,
-) {
-    Card(
-        modifier = Modifier
-            .fillMaxWidth()
-            .clickable(onClick = onClick),
-        shape = RoundedCornerShape(20.dp),
-        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant)
-    ) {
-        Column(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(horizontal = 20.dp, vertical = 16.dp),
-            verticalArrangement = Arrangement.spacedBy(6.dp)
-        ) {
-            Text(
-                text = record.nombre.ifBlank { stringResource(id = R.string.client_detail_unknown_name) },
-                style = MaterialTheme.typography.titleMedium,
-                fontWeight = FontWeight.SemiBold
-            )
-            Text(
-                text = stringResource(id = R.string.iterate_phone, formatPhoneNumber(record.celular)),
-                style = MaterialTheme.typography.bodyMedium
-            )
-            Text(
-                text = stringResource(
-                    id = R.string.iterate_schedule,
-                    record.scheduledDate.format(dateFormatter),
-                    record.scheduledTime.format(timeFormatter)
-                ),
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant
-            )
-        }
-    }
-}
-
-@Composable
-private fun rememberDateFormatter(): DateTimeFormatter {
-    return remember { DateTimeFormatter.ofPattern("dd/MM/yyyy", Locale.getDefault()) }
-}
-
-@Composable
-private fun rememberTimeFormatter(): DateTimeFormatter {
-    return remember { DateTimeFormatter.ofPattern("hh:mm a", Locale.getDefault()) }
-}
-
-private fun formatPhoneNumber(raw: String): String {
-    val digits = raw.filter { it.isDigit() }
-    return if (digits.length == 9) digits.chunked(3).joinToString(" ") else raw
 }

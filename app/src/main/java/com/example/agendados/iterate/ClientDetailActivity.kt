@@ -6,16 +6,17 @@ import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
-import androidx.compose.material3.Button
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.rounded.Phone
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -23,10 +24,13 @@ import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
+import androidx.compose.material3.Icon
+import androidx.compose.foundation.shape.RoundedCornerShape
 import com.example.agendados.R
 import com.example.agendados.data.ClientRecord
 import com.example.agendados.data.ClientRepository
@@ -90,73 +94,51 @@ private fun ClientDetailScreen(
         val scrollState = rememberScrollState()
         val dateFormatter = rememberDetailDateFormatter()
         val timeFormatter = rememberDetailTimeFormatter()
-        Column(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(horizontal = 24.dp, vertical = 32.dp)
-                .verticalScroll(scrollState),
-            verticalArrangement = Arrangement.spacedBy(20.dp)
-        ) {
-            HomeNavigationButton(onClick = onHomeClick)
-            Text(
-                text = stringResource(id = R.string.client_detail_title),
-                style = MaterialTheme.typography.headlineSmall,
-                fontWeight = FontWeight.Bold,
-                textAlign = TextAlign.Center,
-                modifier = Modifier.fillMaxWidth()
-            )
-            if (record == null) {
+        Box(modifier = Modifier.fillMaxSize()) {
+            Column(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .padding(horizontal = 24.dp, vertical = 32.dp)
+                    .verticalScroll(scrollState),
+                verticalArrangement = Arrangement.spacedBy(20.dp)
+            ) {
+                HomeNavigationButton(onClick = onHomeClick)
                 Text(
-                    text = stringResource(id = R.string.client_detail_not_found),
-                    style = MaterialTheme.typography.bodyMedium,
+                    text = stringResource(id = R.string.client_detail_title),
+                    style = MaterialTheme.typography.headlineSmall,
+                    fontWeight = FontWeight.Bold,
                     textAlign = TextAlign.Center,
                     modifier = Modifier.fillMaxWidth()
                 )
-            } else {
-                DetailTextRow(
-                    label = stringResource(id = R.string.client_detail_phone_label),
-                    value = formatPhoneNumber(record.celular)
-                )
-                DetailTextRow(
-                    label = stringResource(id = R.string.client_detail_schedule_label),
-                    value = stringResource(
-                        id = R.string.client_detail_schedule,
-                        record.scheduledDate.format(dateFormatter),
-                        record.scheduledTime.format(timeFormatter)
+                if (record == null) {
+                    Text(
+                        text = stringResource(id = R.string.client_detail_not_found),
+                        style = MaterialTheme.typography.bodyMedium,
+                        textAlign = TextAlign.Center,
+                        modifier = Modifier.fillMaxWidth()
                     )
-                )
-                DetailTextRow(
-                    label = stringResource(id = R.string.client_detail_amount_pp_label),
-                    value = record.montoPP.ifBlank { stringResource(id = R.string.client_detail_placeholder) }
-                )
-                DetailTextRow(
-                    label = stringResource(id = R.string.client_detail_rate_pp_label),
-                    value = record.tasaPP.ifBlank { stringResource(id = R.string.client_detail_placeholder) }
-                )
-                DetailTextRow(
-                    label = stringResource(id = R.string.client_detail_debt_label),
-                    value = record.deuda.ifBlank { stringResource(id = R.string.client_detail_placeholder) }
-                )
-                DetailTextRow(
-                    label = stringResource(id = R.string.client_detail_amount_cd_label),
-                    value = record.montoCD.ifBlank { stringResource(id = R.string.client_detail_placeholder) }
-                )
-                DetailTextRow(
-                    label = stringResource(id = R.string.client_detail_rate_cd_label),
-                    value = record.tasaCD.ifBlank { stringResource(id = R.string.client_detail_placeholder) }
-                )
-                Text(
-                    text = stringResource(id = R.string.client_detail_comments_label),
-                    style = MaterialTheme.typography.titleSmall,
-                    fontWeight = FontWeight.SemiBold
-                )
-                Text(
-                    text = record.comentarios.ifBlank { stringResource(id = R.string.client_detail_no_comments) },
-                    style = MaterialTheme.typography.bodyMedium
-                )
-                Spacer(modifier = Modifier.height(12.dp))
-                Button(onClick = { onCallClick(record.celular) }, modifier = Modifier.fillMaxWidth()) {
-                    Text(text = stringResource(id = R.string.call_button), fontWeight = FontWeight.Bold)
+                } else {
+                    ClientDetailCard(
+                        record = record,
+                        dateFormatter = dateFormatter,
+                        timeFormatter = timeFormatter,
+                        modifier = Modifier.fillMaxWidth()
+                    )
+                }
+            }
+            if (record != null && record.celular.isNotBlank()) {
+                FloatingActionButton(
+                    onClick = { onCallClick(record.celular) },
+                    containerColor = MaterialTheme.colorScheme.primary,
+                    modifier = Modifier
+                        .align(Alignment.TopEnd)
+                        .padding(top = 32.dp, end = 24.dp)
+                ) {
+                    Icon(
+                        imageVector = Icons.Rounded.Phone,
+                        contentDescription = stringResource(id = R.string.call_button),
+                        tint = MaterialTheme.colorScheme.onPrimary
+                    )
                 }
             }
         }
@@ -164,10 +146,89 @@ private fun ClientDetailScreen(
 }
 
 @Composable
-private fun DetailTextRow(label: String, value: String) {
-    Column(verticalArrangement = Arrangement.spacedBy(4.dp), modifier = Modifier.fillMaxWidth()) {
-        Text(text = label, style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.SemiBold)
-        Text(text = value, style = MaterialTheme.typography.bodyMedium)
+fun ClientDetailCard(
+    record: ClientRecord,
+    dateFormatter: DateTimeFormatter = rememberDetailDateFormatter(),
+    timeFormatter: DateTimeFormatter = rememberDetailTimeFormatter(),
+    modifier: Modifier = Modifier
+) {
+    Surface(
+        modifier = modifier,
+        shape = RoundedCornerShape(28.dp),
+        tonalElevation = 6.dp,
+        shadowElevation = 8.dp,
+        color = MaterialTheme.colorScheme.surface
+    ) {
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 24.dp, vertical = 24.dp),
+            verticalArrangement = Arrangement.spacedBy(20.dp)
+        ) {
+            DetailField(
+                label = stringResource(id = R.string.client_detail_phone_label),
+                value = formatPhoneNumber(record.celular)
+            )
+            DetailField(
+                label = stringResource(id = R.string.client_detail_schedule_label),
+                value = stringResource(
+                    id = R.string.client_detail_schedule,
+                    record.scheduledDate.format(dateFormatter),
+                    record.scheduledTime.format(timeFormatter)
+                )
+            )
+            DetailField(
+                label = stringResource(id = R.string.client_detail_amount_pp_label),
+                value = record.montoPP.ifBlank { stringResource(id = R.string.client_detail_placeholder) }
+            )
+            DetailField(
+                label = stringResource(id = R.string.client_detail_rate_pp_label),
+                value = record.tasaPP.ifBlank { stringResource(id = R.string.client_detail_placeholder) }
+            )
+            DetailField(
+                label = stringResource(id = R.string.client_detail_debt_label),
+                value = record.deuda.ifBlank { stringResource(id = R.string.client_detail_placeholder) }
+            )
+            DetailField(
+                label = stringResource(id = R.string.client_detail_amount_cd_label),
+                value = record.montoCD.ifBlank { stringResource(id = R.string.client_detail_placeholder) }
+            )
+            DetailField(
+                label = stringResource(id = R.string.client_detail_rate_cd_label),
+                value = record.tasaCD.ifBlank { stringResource(id = R.string.client_detail_placeholder) }
+            )
+            DetailField(
+                label = stringResource(id = R.string.client_detail_comments_label),
+                value = record.comentarios.ifBlank { stringResource(id = R.string.client_detail_no_comments) },
+                allowMultiline = true
+            )
+        }
+    }
+}
+
+@Composable
+private fun DetailField(label: String, value: String, allowMultiline: Boolean = false) {
+    Column(verticalArrangement = Arrangement.spacedBy(6.dp), modifier = Modifier.fillMaxWidth()) {
+        Text(
+            text = label,
+            style = MaterialTheme.typography.labelLarge,
+            fontWeight = FontWeight.SemiBold,
+            color = MaterialTheme.colorScheme.onSurfaceVariant
+        )
+        Surface(
+            shape = RoundedCornerShape(16.dp),
+            color = MaterialTheme.colorScheme.surfaceVariant,
+            tonalElevation = 0.dp
+        ) {
+            Text(
+                text = value,
+                style = MaterialTheme.typography.bodyLarge,
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 16.dp, vertical = if (allowMultiline) 16.dp else 12.dp),
+                fontWeight = FontWeight.Medium
+            )
+        }
     }
 }
 
