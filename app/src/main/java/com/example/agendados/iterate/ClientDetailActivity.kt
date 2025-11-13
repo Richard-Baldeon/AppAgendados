@@ -133,6 +133,82 @@ private fun ClientDetailScreen(
                     )
                 }
             }
+            if (record != null && record.celular.isNotBlank()) {
+                FloatingActionButton(
+                    onClick = { onCallClick(record.celular) },
+                    containerColor = MaterialTheme.colorScheme.primary,
+                    modifier = Modifier
+                        .align(Alignment.TopEnd)
+                        .padding(top = 32.dp, end = 24.dp)
+                ) {
+                    Icon(
+                        imageVector = Icons.Rounded.Phone,
+                        contentDescription = stringResource(id = R.string.call_button),
+                        tint = MaterialTheme.colorScheme.onPrimary
+                    )
+                }
+            }
+        }
+    }
+}
+
+@Composable
+fun ClientDetailCard(
+    record: ClientRecord,
+    dateFormatter: DateTimeFormatter = rememberDetailDateFormatter(),
+    timeFormatter: DateTimeFormatter = rememberDetailTimeFormatter(),
+    modifier: Modifier = Modifier
+) {
+    Surface(
+        modifier = modifier,
+        shape = RoundedCornerShape(28.dp),
+        tonalElevation = 6.dp,
+        shadowElevation = 8.dp,
+        color = MaterialTheme.colorScheme.surface
+    ) {
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 24.dp, vertical = 24.dp),
+            verticalArrangement = Arrangement.spacedBy(20.dp)
+        ) {
+            DetailField(
+                label = stringResource(id = R.string.client_detail_phone_label),
+                value = formatPhoneNumber(record.celular)
+            )
+            DetailField(
+                label = stringResource(id = R.string.client_detail_schedule_label),
+                value = stringResource(
+                    id = R.string.client_detail_schedule,
+                    record.scheduledDate.format(dateFormatter),
+                    record.scheduledTime.format(timeFormatter)
+                )
+            )
+            DetailField(
+                label = stringResource(id = R.string.client_detail_amount_pp_label),
+                value = record.montoPP.ifBlank { stringResource(id = R.string.client_detail_placeholder) }
+            )
+            DetailField(
+                label = stringResource(id = R.string.client_detail_rate_pp_label),
+                value = record.tasaPP.ifBlank { stringResource(id = R.string.client_detail_placeholder) }
+            )
+            DetailField(
+                label = stringResource(id = R.string.client_detail_debt_label),
+                value = record.deuda.ifBlank { stringResource(id = R.string.client_detail_placeholder) }
+            )
+            DetailField(
+                label = stringResource(id = R.string.client_detail_amount_cd_label),
+                value = record.montoCD.ifBlank { stringResource(id = R.string.client_detail_placeholder) }
+            )
+            DetailField(
+                label = stringResource(id = R.string.client_detail_rate_cd_label),
+                value = record.tasaCD.ifBlank { stringResource(id = R.string.client_detail_placeholder) }
+            )
+            DetailField(
+                label = stringResource(id = R.string.client_detail_comments_label),
+                value = record.comentarios.ifBlank { stringResource(id = R.string.client_detail_no_comments) },
+                allowMultiline = true
+            )
         }
     }
 }
