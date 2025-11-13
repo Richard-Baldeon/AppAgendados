@@ -20,10 +20,6 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Button
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
-import androidx.compose.material3.FloatingActionButton
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.rounded.Phone
-import androidx.compose.material3.Icon
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -88,70 +84,90 @@ fun IterateScreen(
     modifier: Modifier = Modifier
 ) {
     Surface(modifier = modifier.fillMaxSize(), color = MaterialTheme.colorScheme.background) {
-        var currentIndex by rememberSaveable { mutableStateOf(0) }
-        LaunchedEffect(clients.size) {
-            if (clients.isEmpty()) {
-                currentIndex = 0
-            } else if (currentIndex > clients.lastIndex) {
-                currentIndex = clients.lastIndex
+        Column(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(horizontal = 24.dp, vertical = 32.dp),
+            verticalArrangement = Arrangement.spacedBy(24.dp)
+        ) {
+            HomeNavigationButton(onClick = onHomeClick)
+            Column(horizontalAlignment = Alignment.CenterHorizontally, modifier = Modifier.fillMaxWidth()) {
+                Text(
+                    text = stringResource(id = R.string.iterate_title),
+                    style = MaterialTheme.typography.headlineSmall,
+                    fontWeight = FontWeight.Bold,
+                    textAlign = TextAlign.Center
+                )
+                Spacer(modifier = Modifier.height(8.dp))
+                Text(
+                    text = stringResource(id = R.string.iterate_subtitle),
+                    style = MaterialTheme.typography.bodyMedium,
+                    textAlign = TextAlign.Center
+                )
             }
         }
 
-        Box(modifier = Modifier.fillMaxSize()) {
-            Column(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .padding(horizontal = 24.dp, vertical = 32.dp),
-                verticalArrangement = Arrangement.spacedBy(24.dp)
-            ) {
-                HomeNavigationButton(onClick = onHomeClick)
-                Column(horizontalAlignment = Alignment.CenterHorizontally, modifier = Modifier.fillMaxWidth()) {
-                    Text(
-                        text = stringResource(id = R.string.iterate_title),
-                        style = MaterialTheme.typography.headlineSmall,
-                        fontWeight = FontWeight.Bold,
-                        textAlign = TextAlign.Center
-                    )
-                    Spacer(modifier = Modifier.height(8.dp))
-                    Text(
-                        text = stringResource(id = R.string.iterate_subtitle),
-                        style = MaterialTheme.typography.bodyMedium,
-                        textAlign = TextAlign.Center
+            var currentIndex by rememberSaveable { mutableStateOf(0) }
+            LaunchedEffect(clients.size) {
+                if (clients.isEmpty()) {
+                    currentIndex = 0
+                } else if (currentIndex > clients.lastIndex) {
+                    currentIndex = clients.lastIndex
+                }
+            }
+
+            if (clients.isEmpty()) {
+                Text(
+                    text = stringResource(id = R.string.iterate_empty_message),
+                    style = MaterialTheme.typography.bodyMedium,
+                    textAlign = TextAlign.Center,
+                    modifier = Modifier.fillMaxWidth()
+                )
+            } else {
+                val record = clients[currentIndex]
+                val scrollState = rememberScrollState()
+                Text(
+                    text = stringResource(
+                        id = R.string.iterate_position_indicator,
+                        currentIndex + 1,
+                        clients.size
+                    ),
+                    style = MaterialTheme.typography.bodyMedium,
+                    fontWeight = FontWeight.SemiBold,
+                    modifier = Modifier.fillMaxWidth(),
+                    textAlign = TextAlign.Center
+                )
+                Column(
+                    modifier = Modifier
+                        .weight(1f, fill = false)
+                        .fillMaxWidth()
+                        .verticalScroll(scrollState),
+                    verticalArrangement = Arrangement.spacedBy(20.dp)
+                ) {
+                    ClientDetailCard(
+                        record = record,
+                        onCallClick = onCallClick
                     )
                 }
-
-                if (clients.isEmpty()) {
-                    Spacer(modifier = Modifier.height(16.dp))
-                    Text(
-                        text = stringResource(id = R.string.iterate_empty_message),
-                        style = MaterialTheme.typography.bodyMedium,
-                        textAlign = TextAlign.Center,
-                        modifier = Modifier.fillMaxWidth()
-                    )
-                } else {
-                    val record = clients[currentIndex]
-                    val scrollState = rememberScrollState()
-                    Text(
-                        text = stringResource(
-                            id = R.string.iterate_position_indicator,
-                            currentIndex + 1,
-                            clients.size
-                        ),
-                        style = MaterialTheme.typography.bodyMedium,
-                        fontWeight = FontWeight.SemiBold,
-                        modifier = Modifier.fillMaxWidth(),
-                        textAlign = TextAlign.Center
-                    )
-                    Column(
-                        modifier = Modifier
-                            .weight(1f)
-                            .fillMaxWidth()
-                            .verticalScroll(scrollState),
-                        verticalArrangement = Arrangement.spacedBy(20.dp)
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(16.dp)
+                ) {
+                    OutlinedButton(
+                        onClick = { if (currentIndex > 0) currentIndex-- },
+                        enabled = currentIndex > 0,
+                        modifier = Modifier.weight(1f)
                     ) {
-                        ClientDetailCard(
-                            record = record,
-                            modifier = Modifier.fillMaxWidth()
+                        Text(text = stringResource(id = R.string.iterate_previous_button))
+                    }
+                    Button(
+                        onClick = { if (currentIndex < clients.lastIndex) currentIndex++ },
+                        enabled = currentIndex < clients.lastIndex,
+                        modifier = Modifier.weight(1f)
+                    ) {
+                        Text(
+                            text = stringResource(id = R.string.iterate_next_button),
+                            fontWeight = FontWeight.SemiBold
                         )
                     }
                     Row(
@@ -176,23 +192,6 @@ fun IterateScreen(
                             )
                         }
                     }
-                }
-            }
-
-            val activeRecord = clients.getOrNull(currentIndex)
-            if (activeRecord != null && activeRecord.celular.isNotBlank()) {
-                FloatingActionButton(
-                    onClick = { onCallClick(activeRecord.celular) },
-                    containerColor = MaterialTheme.colorScheme.primary,
-                    modifier = Modifier
-                        .align(Alignment.TopEnd)
-                        .padding(top = 32.dp, end = 24.dp)
-                ) {
-                    Icon(
-                        imageVector = Icons.Rounded.Phone,
-                        contentDescription = stringResource(id = R.string.call_button),
-                        tint = MaterialTheme.colorScheme.onPrimary
-                    )
                 }
             }
         }

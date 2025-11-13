@@ -29,8 +29,6 @@ import androidx.compose.ui.unit.dp
 import com.example.agendados.R
 import com.example.agendados.addclient.AddClientActivity
 import com.example.agendados.data.ClientRepository
-import com.example.agendados.delete.DeleteClientActivity
-import com.example.agendados.events.UpcomingEventsActivity
 import com.example.agendados.iterate.IterateActivity
 import com.example.agendados.records.RecordsActivity
 import com.example.agendados.ui.theme.AgendadosTheme
@@ -45,7 +43,7 @@ class HomeActivity : ComponentActivity() {
             AgendadosTheme {
                 HomeScreen(
                     onAddClick = { openAddClient() },
-                    onEliminarClick = { openDeleteClient() },
+                    onEliminarClick = { showComingSoonToast(R.string.home_option_delete) },
                     onRegistrosClick = { openRecords() },
                     onIterarClick = { openIterate() },
                     onEventosClick = { openUpcomingEvents() },
@@ -65,14 +63,6 @@ class HomeActivity : ComponentActivity() {
             return
         }
         startActivity(Intent(this, IterateActivity::class.java))
-    }
-
-    private fun openDeleteClient() {
-        startActivity(Intent(this, DeleteClientActivity::class.java))
-    }
-
-    private fun openUpcomingEvents() {
-        startActivity(Intent(this, UpcomingEventsActivity::class.java))
     }
 
     private fun openRecords() {

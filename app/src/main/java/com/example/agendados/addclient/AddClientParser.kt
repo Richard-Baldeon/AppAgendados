@@ -34,7 +34,6 @@ private val TASA_CD_REGEX = Regex(
 
 private val INVALID_NAME_TOKENS = setOf("celular", "telefono", "teléfono", "numero", "número", "es")
 private val NAME_STOP_KEYWORDS = listOf(
-    "monto de compra de deuda",
     "monto compra de deuda",
     "monto cd",
     "monto pp",
@@ -52,6 +51,9 @@ private val NAME_STOP_KEYWORDS = listOf(
     "comentario"
 )
 private val NAME_PREFIX_REGEX = Regex("(?i)^(?:nombre|se llama|cliente|es)\\b[:\\s\\-]*")
+private val AMOUNT_VALUE_REGEX = Regex("""^\\s*(?:s\\s*/\\.?\\s*)?($NUMBER_CAPTURE_PATTERN)""", RegexOption.IGNORE_CASE)
+private val RATE_VALUE_REGEX = Regex("""^\\s*($NUMBER_CAPTURE_PATTERN)\\s*(%?)""", RegexOption.IGNORE_CASE)
+
 /**
  * Result returned after parsing a dictation text.
  */
@@ -78,11 +80,11 @@ fun parseDictation(input: String): ParserResult {
     val phoneDetection = detectPhone(normalizedInput)
     val phone = phoneDetection?.digits
     val name = detectName(input, normalizedInput, phoneDetection?.range)
-    val montoPP = extractMontoPP(input)
-    val tasaPP = extractTasaPP(input)
-    val deuda = extractDeuda(input)
-    val montoCD = extractMontoCD(input)
-    val tasaCD = extractTasaCD(input)
+    val montoPP = extractMontoPP(input, normalizedInput)
+    val tasaPP = extractTasaPP(input, normalizedInput)
+    val deuda = extractAmountAfterLabels(input, normalizedInput, listOf("deuda"))
+    val montoCD = extractAmountAfterLabels(input, normalizedInput, listOf("monto compra de deuda", "monto cd"))
+    val tasaCD = extractRateAfterLabels(input, normalizedInput, listOf("tasa compra de deuda", "tasa cd"))
     val comentarios = detectComment(input, normalizedInput)
     val time = detectTime(input)
 
@@ -196,6 +198,12 @@ private fun detectComment(input: String, normalized: String): String? {
     return extracted.takeIf { it.isNotBlank() }
 }
 
+private fun extractContext(text: String, range: IntRange): String {
+    val start = (range.first - 40).coerceAtLeast(0)
+    val end = (range.last + 40).coerceAtMost(text.length)
+    return text.substring(start, end)
+}
+
 private fun normalizeAmount(raw: String): String {
     val lowered = raw.lowercase(Locale.getDefault())
     var sanitized = lowered
@@ -260,33 +268,160 @@ private fun parseNumberValue(value: String): BigDecimal? {
     return builder.toString().toBigDecimalOrNull()
 }
 
-private fun extractMontoPP(input: String): String? {
-    return matchAmount(MONTO_PP_SPECIFIC_REGEX, input)
-        ?: matchAmount(MONTO_PP_GENERAL_REGEX, input)
+private fun extractMontoPP(input: String, normalized: String): String? {
+    val specific = extractAmountAfterLabels(
+        input,
+        normalized,
+        listOf(
+            "monto prestamo personal",
+            "monto préstamo personal",
+            "monto del prestamo personal",
+            "monto del préstamo personal",
+            "monto pp"
+        )
+    )
+    if (specific != null) {
+        return specific
+    }
+    return extractGeneralMonto(input, normalized, "monto")
 }
 
-private fun extractTasaPP(input: String): String? {
-    return matchRate(TASA_PP_SPECIFIC_REGEX, input)
-        ?: matchRate(TASA_PP_GENERAL_REGEX, input)
+private fun extractTasaPP(input: String, normalized: String): String? {
+    val specific = extractRateAfterLabels(
+        input,
+        normalized,
+        listOf(
+            "tasa prestamo personal",
+            "tasa préstamo personal",
+            "tasa del prestamo personal",
+            "tasa del préstamo personal",
+            "tasa pp"
+        )
+    )
+    if (specific != null) {
+        return specific
+    }
+    return extractGeneralTasa(input, normalized)
 }
 
-private fun extractDeuda(input: String): String? = matchAmount(DEUDA_REGEX, input)
+private fun extractGeneralMonto(input: String, normalized: String, label: String): String? {
+    var searchIndex = normalized.indexOf(label)
+    while (searchIndex >= 0) {
+        val labelEnd = searchIndex + label.length
+        val valueStart = advanceToValueStart(normalized, labelEnd)
+        val lookAhead = normalized.substring(valueStart)
+        if (!lookAhead.startsWith("compra") && !lookAhead.startsWith("cd")) {
+            val value = extractAmountFromIndex(input, labelEnd)
+            if (value != null) {
+                return value
+            }
+        }
+        searchIndex = normalized.indexOf(label, labelEnd)
+    }
+    return null
+}
 
-private fun extractMontoCD(input: String): String? = matchAmount(MONTO_CD_REGEX, input)
+private fun extractGeneralTasa(input: String, normalized: String): String? {
+    var searchIndex = normalized.indexOf("tasa")
+    while (searchIndex >= 0) {
+        val labelEnd = searchIndex + "tasa".length
+        val valueStart = advanceToValueStart(normalized, labelEnd)
+        val lookAhead = normalized.substring(valueStart)
+        if (!lookAhead.startsWith("compra") && !lookAhead.startsWith("cd")) {
+            val value = extractRateFromIndex(input, labelEnd)
+            if (value != null) {
+                return value
+            }
+        }
+        searchIndex = normalized.indexOf("tasa", labelEnd)
+    }
+    return null
+}
 
-private fun extractTasaCD(input: String): String? = matchRate(TASA_CD_REGEX, input)
+private fun extractAmountAfterLabels(
+    input: String,
+    normalized: String,
+    labels: List<String>
+): String? {
+    var bestIndex = Int.MAX_VALUE
+    var bestValue: String? = null
+    for (label in labels) {
+        var searchIndex = normalized.indexOf(label)
+        while (searchIndex >= 0) {
+            val labelEnd = searchIndex + label.length
+            val normalizedStart = advanceToValueStart(normalized, labelEnd)
+            val value = extractAmountFromIndex(input, labelEnd)
+            if (value != null) {
+                if (normalizedStart < bestIndex) {
+                    bestIndex = normalizedStart
+                    bestValue = value
+                }
+                break
+            }
+            searchIndex = normalized.indexOf(label, labelEnd)
+        }
+    }
+    return bestValue
+}
 
-private fun matchAmount(regex: Regex, input: String): String? {
-    val match = regex.find(input) ?: return null
-    val raw = match.groupValues.getOrNull(1)?.takeIf { it.isNotBlank() } ?: return null
+private fun extractRateAfterLabels(
+    input: String,
+    normalized: String,
+    labels: List<String>
+): String? {
+    var bestIndex = Int.MAX_VALUE
+    var bestValue: String? = null
+    for (label in labels) {
+        var searchIndex = normalized.indexOf(label)
+        while (searchIndex >= 0) {
+            val labelEnd = searchIndex + label.length
+            val normalizedStart = advanceToValueStart(normalized, labelEnd)
+            val value = extractRateFromIndex(input, labelEnd)
+            if (value != null) {
+                if (normalizedStart < bestIndex) {
+                    bestIndex = normalizedStart
+                    bestValue = value
+                }
+                break
+            }
+            searchIndex = normalized.indexOf(label, labelEnd)
+        }
+    }
+    return bestValue
+}
+
+private fun advanceToValueStart(text: String, start: Int): Int {
+    var index = start
+    while (index < text.length) {
+        when (text[index]) {
+            ' ', ':', '-', '—', '=', '.', ',', ';' -> index++
+            else -> break
+        }
+    }
+    return index
+}
+
+private fun extractAmountFromIndex(original: String, labelEnd: Int): String? {
+    val start = advanceToValueStart(original, labelEnd)
+    if (start >= original.length) {
+        return null
+    }
+    val tail = original.substring(start)
+    val match = AMOUNT_VALUE_REGEX.find(tail) ?: return null
+    val raw = tail.substring(match.range.first, match.range.last + 1)
     return normalizeAmount(raw)
 }
 
-private fun matchRate(regex: Regex, input: String): String? {
-    val match = regex.find(input) ?: return null
-    val number = match.groupValues.getOrNull(1)?.takeIf { it.isNotBlank() } ?: return null
+private fun extractRateFromIndex(original: String, labelEnd: Int): String? {
+    val start = advanceToValueStart(original, labelEnd)
+    if (start >= original.length) {
+        return null
+    }
+    val tail = original.substring(start)
+    val match = RATE_VALUE_REGEX.find(tail) ?: return null
+    val number = match.groupValues[1]
     val percent = match.groupValues.getOrNull(2).orEmpty()
-    val raw = if (percent.isNotBlank()) "$number%" else number
+    val raw = if (percent.isNotEmpty()) "$number%" else number
     return normalizeRate(raw)
 }
 
