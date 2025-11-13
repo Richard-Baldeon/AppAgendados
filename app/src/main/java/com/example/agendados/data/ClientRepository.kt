@@ -27,7 +27,8 @@ data class ClientRecord(
     val tasaCD: String,
     val comentarios: String,
     val scheduledDate: LocalDate,
-    val scheduledTime: LocalTime
+    val scheduledTime: LocalTime,
+    val alarmActive: Boolean
 )
 
 /**
@@ -50,6 +51,27 @@ class ClientRepository private constructor(context: Context) {
         _clients.update { current ->
             val withoutPhoneDuplicates = current.filterNot { it.celular.filter { c -> c.isDigit() } == normalizedPhone }
             val updated = withoutPhoneDuplicates + record.copy(celular = normalizedPhone)
+            val sorted = updated.sortedWith(compareBy<ClientRecord> { it.scheduledDate }.thenBy { it.scheduledTime })
+            persist(sorted)
+            sorted
+        }
+    }
+
+    fun updateAlarmStatus(id: String, enabled: Boolean) {
+        _clients.update { current ->
+            val updated = current.map { record ->
+                if (record.id == id) record.copy(alarmActive = enabled) else record
+            }
+            val sorted = updated.sortedWith(compareBy<ClientRecord> { it.scheduledDate }.thenBy { it.scheduledTime })
+            persist(sorted)
+            sorted
+        }
+    }
+
+    fun deleteRecords(ids: Set<String>) {
+        if (ids.isEmpty()) return
+        _clients.update { current ->
+            val updated = current.filterNot { it.id in ids }
             val sorted = updated.sortedWith(compareBy<ClientRecord> { it.scheduledDate }.thenBy { it.scheduledTime })
             persist(sorted)
             sorted
@@ -83,6 +105,7 @@ class ClientRepository private constructor(context: Context) {
                 val scheduledTime = obj.optString("scheduledTime").takeIf { it.isNotBlank() }?.let {
                     runCatching { LocalTime.parse(it) }.getOrNull()
                 } ?: continue
+                val alarmActive = obj.optBoolean("alarmActive", true)
                 result.add(
                     ClientRecord(
                         id = id,
@@ -96,7 +119,8 @@ class ClientRepository private constructor(context: Context) {
                         tasaCD = tasaCD,
                         comentarios = comentarios,
                         scheduledDate = scheduledDate,
-                        scheduledTime = scheduledTime
+                        scheduledTime = scheduledTime,
+                        alarmActive = alarmActive
                     )
                 )
             }
@@ -120,6 +144,7 @@ class ClientRepository private constructor(context: Context) {
                 put("comentarios", record.comentarios)
                 put("scheduledDate", record.scheduledDate.toString())
                 put("scheduledTime", record.scheduledTime.toString())
+                put("alarmActive", record.alarmActive)
             }
             array.put(obj)
         }

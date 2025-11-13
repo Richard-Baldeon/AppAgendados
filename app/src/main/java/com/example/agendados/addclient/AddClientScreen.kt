@@ -17,6 +17,7 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.defaultMinSize
 import androidx.compose.foundation.layout.fillMaxSize
@@ -155,6 +156,7 @@ fun AddClientRoute(
             putExtra(RecognizerIntent.EXTRA_LANGUAGE_MODEL, RecognizerIntent.LANGUAGE_MODEL_FREE_FORM)
             putExtra(RecognizerIntent.EXTRA_LANGUAGE, Locale.getDefault())
             putExtra(RecognizerIntent.EXTRA_PROMPT, context.getString(R.string.add_client_title))
+            putExtra(RecognizerIntent.EXTRA_PARTIAL_RESULTS, true)
         }
     }
     val lifecycleOwner = LocalLifecycleOwner.current
@@ -244,17 +246,11 @@ fun AddClientRoute(
     }
 
     val isMicEnabled = speechAvailable && speechRecognizer != null
-    val listeningHint = if (!isMicEnabled) {
-        context.getString(R.string.no_speech_recognizer)
-    } else {
-        null
-    }
 
     AddClientScreen(
         state = state,
         isMicEnabled = isMicEnabled,
         isListening = isListening,
-        listeningMessage = listeningHint,
         onMicClick = { handleMicClick() },
         onCelularChange = viewModel::updateCelular,
         onNombreChange = viewModel::updateNombre,
@@ -302,7 +298,6 @@ fun AddClientScreen(
     state: AddClientUiState,
     isMicEnabled: Boolean,
     isListening: Boolean,
-    listeningMessage: String? = null,
     onMicClick: () -> Unit,
     onCelularChange: (String) -> Unit,
     onNombreChange: (String) -> Unit,
@@ -321,7 +316,6 @@ fun AddClientScreen(
     modifier: Modifier = Modifier
 ) {
     val scrollState = rememberScrollState()
-    val displayListeningMessage = listeningMessage ?: stringResource(R.string.listening_message)
     Column(
         modifier
             .fillMaxSize()
@@ -369,14 +363,6 @@ fun AddClientScreen(
                 }
             }
         }
-        Spacer(modifier = Modifier.height(12.dp))
-        Text(
-            text = displayListeningMessage,
-            style = MaterialTheme.typography.bodyMedium,
-            modifier = Modifier.fillMaxWidth(),
-            textAlign = TextAlign.Center,
-            color = if (isListening) ActionColor else TextColor
-        )
         Spacer(modifier = Modifier.height(32.dp))
         DictationPreview(text = state.dictationText)
         Spacer(modifier = Modifier.height(24.dp))
@@ -624,14 +610,29 @@ private fun TimePicker(
             onValueChange = onHourChange,
             modifier = Modifier.weight(1f)
         )
-        AndroidNumberPicker(
-            minValue = 0,
-            maxValue = 59,
-            value = minute.coerceIn(0, 59),
-            displayedValues = (0..59).map { String.format(Locale.getDefault(), "%02d", it) }.toTypedArray(),
-            onValueChange = onMinuteChange,
-            modifier = Modifier.weight(1f)
-        )
+        Column(
+            modifier = Modifier.weight(1f),
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.spacedBy(8.dp)
+        ) {
+            OutlinedButton(
+                onClick = {
+                    val newMinute = if (minute == 30) 0 else 30
+                    onMinuteChange(newMinute)
+                },
+                contentPadding = PaddingValues(horizontal = 12.dp, vertical = 6.dp)
+            ) {
+                Text(text = stringResource(id = R.string.minute_toggle_button))
+            }
+            AndroidNumberPicker(
+                minValue = 0,
+                maxValue = 59,
+                value = minute.coerceIn(0, 59),
+                displayedValues = (0..59).map { String.format(Locale.getDefault(), "%02d", it) }.toTypedArray(),
+                onValueChange = onMinuteChange,
+                modifier = Modifier.fillMaxWidth()
+            )
+        }
         AndroidNumberPicker(
             minValue = 0,
             maxValue = 1,

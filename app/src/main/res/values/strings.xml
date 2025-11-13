@@ -40,7 +40,13 @@
     <string name="home_option_add">Añadir cliente</string>
     <string name="home_option_add_description">Registra un nuevo cliente en tu agenda.</string>
     <string name="home_option_delete">Eliminar cliente</string>
+    <string name="home_option_delete_description">Dicta un número y elimina los registros asociados.</string>
+    <string name="home_option_records">Registros</string>
+    <string name="home_option_records_description">Consulta todos los clientes guardados.</string>
     <string name="home_option_iterate">Iterar cartera</string>
+    <string name="home_option_iterate_description">Revisa cada cliente uno por uno.</string>
+    <string name="home_option_events">Próximos eventos</string>
+    <string name="home_option_events_description">Revisa y administra las alarmas programadas.</string>
     <string name="home_option_ticket">Generar ticket</string>
     <string name="home_option_pending">Próximamente disponible</string>
     <string name="home_option_coming_soon">La opción %1$s estará disponible pronto.</string>

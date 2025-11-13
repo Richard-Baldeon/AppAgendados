@@ -46,6 +46,7 @@ class HomeActivity : ComponentActivity() {
                     onEliminarClick = { showComingSoonToast(R.string.home_option_delete) },
                     onRegistrosClick = { openRecords() },
                     onIterarClick = { openIterate() },
+                    onEventosClick = { openUpcomingEvents() },
                     onTicketClick = { showComingSoonToast(R.string.home_option_ticket) }
                 )
             }
@@ -80,6 +81,7 @@ fun HomeScreen(
     onEliminarClick: () -> Unit,
     onRegistrosClick: () -> Unit,
     onIterarClick: () -> Unit,
+    onEventosClick: () -> Unit,
     onTicketClick: () -> Unit,
     modifier: Modifier = Modifier
 ) {
@@ -116,7 +118,7 @@ fun HomeScreen(
             )
             MenuOption(
                 title = stringResource(id = R.string.home_option_delete),
-                description = stringResource(id = R.string.home_option_pending),
+                description = stringResource(id = R.string.home_option_delete_description),
                 onClick = onEliminarClick
             )
             MenuOption(
@@ -126,8 +128,13 @@ fun HomeScreen(
             )
             MenuOption(
                 title = stringResource(id = R.string.home_option_iterate),
-                description = stringResource(id = R.string.home_option_pending),
+                description = stringResource(id = R.string.home_option_iterate_description),
                 onClick = onIterarClick
+            )
+            MenuOption(
+                title = stringResource(id = R.string.home_option_events),
+                description = stringResource(id = R.string.home_option_events_description),
+                onClick = onEventosClick
             )
             MenuOption(
                 title = stringResource(id = R.string.home_option_ticket),

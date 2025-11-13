@@ -1,5 +1,6 @@
 package com.example.agendados.addclient
 
+import java.math.BigDecimal
 import java.text.Normalizer
 import java.time.LocalTime
 import java.util.Locale
@@ -9,6 +10,27 @@ private val NAME_KEYWORD_REGEX = Regex("(?i)(?:nombre|se llama|cliente)\\s*[:\\-
 private val TIME_REGEX = Regex("""(?i)\\b(\\d{1,2})(?::(\\d{2}))?\\s*(a\\.?m\\.?|p\\.?m\\.?|am|pm)?\\b""")
 private val AM_PM_ONLY_REGEX = Regex("(?i)\\b(?:am|pm|a\\.?m\\.?|p\\.?m\\.?)\\b")
 private const val NUMBER_CAPTURE_PATTERN = "\\d[\\d.,\\s]*\\d?(?:\\s*(?:k|mil))?"
+private val MONTO_PP_SPECIFIC_REGEX = Regex(
+    "(?i)monto\\s+(?:del\\s+)?(?:pr[eé]stamo\\s+personal|pp)\\s*[:\\-–—=\\s]*($NUMBER_CAPTURE_PATTERN)"
+)
+private val MONTO_PP_GENERAL_REGEX = Regex(
+    "(?i)monto\\s*(?!del?\\s+pr[eé]stamo\\s+personal|pp|de\\s+compra\\s+de\\s+deuda|compra\\s+de\\s+deuda|cd)[:\\-–—=\\s]*($NUMBER_CAPTURE_PATTERN)"
+)
+private val TASA_PP_SPECIFIC_REGEX = Regex(
+    "(?i)tasa\\s+(?:del\\s+)?(?:pr[eé]stamo\\s+personal|pp)\\s*[:\\-–—=\\s]*($NUMBER_CAPTURE_PATTERN)\\s*(%?)"
+)
+private val TASA_PP_GENERAL_REGEX = Regex(
+    "(?i)tasa\\s*(?!del?\\s+compra\\s+de\\s+deuda|compra\\s+de\\s+deuda|cd)[:\\-–—=\\s]*($NUMBER_CAPTURE_PATTERN)\\s*(%?)"
+)
+private val DEUDA_REGEX = Regex(
+    "(?i)deuda\\s*[:\\-–—=\\s]*($NUMBER_CAPTURE_PATTERN)"
+)
+private val MONTO_CD_REGEX = Regex(
+    "(?i)monto\\s+(?:(?:de\\s+)?compra\\s+de\\s+deuda|cd)\\s*[:\\-–—=\\s]*($NUMBER_CAPTURE_PATTERN)"
+)
+private val TASA_CD_REGEX = Regex(
+    "(?i)tasa\\s+(?:(?:de\\s+)?compra\\s+de\\s+deuda|cd)\\s*[:\\-–—=\\s]*($NUMBER_CAPTURE_PATTERN)\\s*(%?)"
+)
 
 private val INVALID_NAME_TOKENS = setOf("celular", "telefono", "teléfono", "numero", "número", "es")
 private val NAME_STOP_KEYWORDS = listOf(
@@ -77,6 +99,14 @@ fun parseDictation(input: String): ParserResult {
         comentarios = comentarios,
         scheduledTime = time
     )
+}
+
+fun extractPhoneDigits(input: String): String? {
+    if (input.isBlank()) {
+        return null
+    }
+    val normalized = normalizeText(input)
+    return detectPhone(normalized)?.digits
 }
 
 private fun normalizeText(input: String): String {
@@ -175,8 +205,8 @@ private fun extractContext(text: String, range: IntRange): String {
 }
 
 private fun normalizeAmount(raw: String): String {
-    val lowered = raw.lowercase(Locale.getDefault()).trim()
-    val sanitizedCurrency = lowered
+    val lowered = raw.lowercase(Locale.getDefault())
+    var sanitized = lowered
         .replace("s/.", "")
         .replace("s/", "")
         .replace("soles", "")
@@ -185,39 +215,57 @@ private fun normalizeAmount(raw: String): String {
         .replace("dolares", "")
         .replace("dólares", "")
         .replace("usd", "")
+        .trim()
     val multiplier = when {
-        sanitizedCurrency.contains("k") || sanitizedCurrency.contains("mil") -> 1_000
-        else -> 1
+        sanitized.contains("k") || sanitized.contains("mil") -> BigDecimal(1_000)
+        else -> BigDecimal.ONE
     }
-    val digitsOnly = sanitizedCurrency.replace("k", "").replace("mil", "")
-        .replace(" ", "").replace(".", "").replace(",", "")
-    val amount = digitsOnly.toBigDecimalOrNull()?.times(multiplier.toBigDecimal())
-        ?: return raw.trim()
-    val rounded = amount.setScale(0, java.math.RoundingMode.HALF_UP)
-    return try {
-        formatAmount(rounded.toBigInteger().longValueExact())
-    } catch (ex: ArithmeticException) {
-        raw.trim()
-    }
-}
-
-private fun formatAmount(value: Long): String {
-    val formatted = String.format(Locale.US, "%,d", value)
-    return formatted.replace(",", ".")
+    sanitized = sanitized
+        .replace("k", "")
+        .replace("mil", "")
+        .replace(" ", "")
+    val number = parseNumberValue(sanitized) ?: return raw.trim()
+    return number.multiply(multiplier).stripTrailingZeros().toPlainString()
 }
 
 private fun normalizeRate(raw: String): String {
     val lowered = raw.lowercase(Locale.getDefault())
-    val cleaned = lowered
+    var sanitized = lowered
         .replace("%", "")
         .replace("porciento", "")
         .replace("por ciento", "")
         .replace("porcentaje", "")
-        .replace(" ", "")
-        .replace(",", ".")
-    val number = cleaned.toBigDecimalOrNull() ?: return raw.trim()
-    val normalized = number.stripTrailingZeros().toPlainString()
-    return "$normalized%"
+        .replace("por", "")
+        .replace("de", "")
+        .trim()
+    sanitized = sanitized.replace(" ", "")
+    val number = parseNumberValue(sanitized) ?: return raw.trim()
+    return number.stripTrailingZeros().toPlainString()
+}
+
+private fun parseNumberValue(value: String): BigDecimal? {
+    if (value.isBlank()) return null
+    val clean = value.filter { it.isDigit() || it == ',' || it == '.' }
+    if (clean.isEmpty()) return null
+    val lastComma = clean.lastIndexOf(',')
+    val lastDot = clean.lastIndexOf('.')
+    val decimalIndex = when {
+        lastComma >= 0 && lastDot >= 0 -> maxOf(lastComma, lastDot)
+        lastComma >= 0 -> if ((clean.length - lastComma - 1) <= 3) lastComma else -1
+        lastDot >= 0 -> if ((clean.length - lastDot - 1) <= 3) lastDot else -1
+        else -> -1
+    }
+    if (decimalIndex == -1) {
+        return clean.replace(",", "").replace(".", "").toBigDecimalOrNull()
+    }
+    val builder = StringBuilder()
+    clean.forEachIndexed { index, c ->
+        when (c) {
+            ',', '.' -> if (index == decimalIndex) builder.append('.')
+            else -> builder.append(c)
+        }
+    }
+    return builder.toString().toBigDecimalOrNull()
 }
 
 private fun extractMontoPP(input: String, normalized: String): String? {

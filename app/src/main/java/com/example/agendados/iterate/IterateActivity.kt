@@ -6,6 +6,7 @@ import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -103,6 +104,7 @@ fun IterateScreen(
                     textAlign = TextAlign.Center
                 )
             }
+        }
 
             var currentIndex by rememberSaveable { mutableStateOf(0) }
             LaunchedEffect(clients.size) {
@@ -166,6 +168,28 @@ fun IterateScreen(
                             text = stringResource(id = R.string.iterate_next_button),
                             fontWeight = FontWeight.SemiBold
                         )
+                    }
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.spacedBy(16.dp)
+                    ) {
+                        OutlinedButton(
+                            onClick = { if (currentIndex > 0) currentIndex-- },
+                            enabled = currentIndex > 0,
+                            modifier = Modifier.weight(1f)
+                        ) {
+                            Text(text = stringResource(id = R.string.iterate_previous_button))
+                        }
+                        Button(
+                            onClick = { if (currentIndex < clients.lastIndex) currentIndex++ },
+                            enabled = currentIndex < clients.lastIndex,
+                            modifier = Modifier.weight(1f)
+                        ) {
+                            Text(
+                                text = stringResource(id = R.string.iterate_next_button),
+                                fontWeight = FontWeight.SemiBold
+                            )
+                        }
                     }
                 }
             }

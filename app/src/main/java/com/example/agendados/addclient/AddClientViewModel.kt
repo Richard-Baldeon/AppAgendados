@@ -127,7 +127,8 @@ class AddClientViewModel(
             tasaCD = state.tasaCD,
             comentarios = state.comentarios,
             scheduledDate = date,
-            scheduledTime = time
+            scheduledTime = time,
+            alarmActive = existing?.alarmActive ?: true
         )
         repository.addOrUpdate(record)
 
