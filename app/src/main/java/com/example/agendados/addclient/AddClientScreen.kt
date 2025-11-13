@@ -134,7 +134,14 @@ fun AddClientRoute(
                     }
                 }
 
-                override fun onPartialResults(partialResults: Bundle?) = Unit
+                override fun onPartialResults(partialResults: Bundle?) {
+                    val partial = partialResults
+                        ?.getStringArrayList(SpeechRecognizer.RESULTS_RECOGNITION)
+                        ?.firstOrNull()
+                    if (!partial.isNullOrBlank()) {
+                        viewModel.onDictation(partial)
+                    }
+                }
 
                 override fun onEvent(eventType: Int, params: Bundle?) = Unit
                 })
@@ -224,6 +231,7 @@ fun AddClientRoute(
         return when (val result = viewModel.saveCurrentClient()) {
             is SaveResult.Success -> {
                 Toast.makeText(context, R.string.schedule_saved_message, Toast.LENGTH_SHORT).show()
+                viewModel.resetForm()
                 true
             }
 
@@ -370,6 +378,8 @@ fun AddClientScreen(
             color = if (isListening) ActionColor else TextColor
         )
         Spacer(modifier = Modifier.height(32.dp))
+        DictationPreview(text = state.dictationText)
+        Spacer(modifier = Modifier.height(24.dp))
         BlockFields(
             state = state,
             onCelularChange = onCelularChange,
@@ -405,6 +415,33 @@ fun AddClientScreen(
             )
         }
         Spacer(modifier = Modifier.height(32.dp))
+    }
+}
+
+@Composable
+private fun DictationPreview(text: String, modifier: Modifier = Modifier) {
+    Column(modifier = modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+        Text(
+            text = stringResource(id = R.string.dictation_preview_label),
+            style = MaterialTheme.typography.bodyMedium.copy(color = TextColor, fontWeight = FontWeight.Medium)
+        )
+        Surface(
+            shape = RoundedCornerShape(12.dp),
+            color = FieldBackground,
+            tonalElevation = 0.dp,
+            modifier = Modifier
+                .fillMaxWidth()
+                .shadow(6.dp, RoundedCornerShape(12.dp))
+        ) {
+            Text(
+                text = text.ifBlank { stringResource(id = R.string.dictation_preview_placeholder) },
+                style = MaterialTheme.typography.bodyMedium.copy(color = TextColor),
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .defaultMinSize(minHeight = 96.dp)
+                    .padding(horizontal = 16.dp, vertical = 14.dp)
+            )
+        }
     }
 }
 
