@@ -28,10 +28,16 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import com.example.agendados.R
 import com.example.agendados.addclient.AddClientActivity
+import com.example.agendados.data.ClientRepository
+import com.example.agendados.delete.DeleteClientActivity
+import com.example.agendados.events.UpcomingEventsActivity
 import com.example.agendados.iterate.IterateActivity
+import com.example.agendados.records.RecordsActivity
 import com.example.agendados.ui.theme.AgendadosTheme
 
 class HomeActivity : ComponentActivity() {
+
+    private val repository by lazy { ClientRepository.getInstance(applicationContext) }
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -39,8 +45,10 @@ class HomeActivity : ComponentActivity() {
             AgendadosTheme {
                 HomeScreen(
                     onAddClick = { openAddClient() },
-                    onEliminarClick = { showComingSoonToast(R.string.home_option_delete) },
+                    onEliminarClick = { openDeleteClient() },
+                    onRegistrosClick = { openRecords() },
                     onIterarClick = { openIterate() },
+                    onEventosClick = { openUpcomingEvents() },
                     onTicketClick = { showComingSoonToast(R.string.home_option_ticket) }
                 )
             }
@@ -52,7 +60,23 @@ class HomeActivity : ComponentActivity() {
     }
 
     private fun openIterate() {
+        if (repository.clients.value.isEmpty()) {
+            Toast.makeText(this, R.string.home_no_clients_message, Toast.LENGTH_SHORT).show()
+            return
+        }
         startActivity(Intent(this, IterateActivity::class.java))
+    }
+
+    private fun openDeleteClient() {
+        startActivity(Intent(this, DeleteClientActivity::class.java))
+    }
+
+    private fun openUpcomingEvents() {
+        startActivity(Intent(this, UpcomingEventsActivity::class.java))
+    }
+
+    private fun openRecords() {
+        startActivity(Intent(this, RecordsActivity::class.java))
     }
 
     private fun showComingSoonToast(optionRes: Int) {
@@ -65,7 +89,9 @@ class HomeActivity : ComponentActivity() {
 fun HomeScreen(
     onAddClick: () -> Unit,
     onEliminarClick: () -> Unit,
+    onRegistrosClick: () -> Unit,
     onIterarClick: () -> Unit,
+    onEventosClick: () -> Unit,
     onTicketClick: () -> Unit,
     modifier: Modifier = Modifier
 ) {
@@ -102,13 +128,23 @@ fun HomeScreen(
             )
             MenuOption(
                 title = stringResource(id = R.string.home_option_delete),
-                description = stringResource(id = R.string.home_option_pending),
+                description = stringResource(id = R.string.home_option_delete_description),
                 onClick = onEliminarClick
             )
             MenuOption(
+                title = stringResource(id = R.string.home_option_records),
+                description = stringResource(id = R.string.home_option_records_description),
+                onClick = onRegistrosClick
+            )
+            MenuOption(
                 title = stringResource(id = R.string.home_option_iterate),
-                description = stringResource(id = R.string.home_option_pending),
+                description = stringResource(id = R.string.home_option_iterate_description),
                 onClick = onIterarClick
+            )
+            MenuOption(
+                title = stringResource(id = R.string.home_option_events),
+                description = stringResource(id = R.string.home_option_events_description),
+                onClick = onEventosClick
             )
             MenuOption(
                 title = stringResource(id = R.string.home_option_ticket),

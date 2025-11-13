@@ -127,11 +127,36 @@ class AddClientViewModel(
             tasaCD = state.tasaCD,
             comentarios = state.comentarios,
             scheduledDate = date,
-            scheduledTime = time
+            scheduledTime = time,
+            alarmActive = existing?.alarmActive ?: true
         )
         repository.addOrUpdate(record)
 
         return SaveResult.Success(recordId)
+    }
+
+    fun resetForm() {
+        val options = generateDateOptions(clock)
+        val defaultDate = computeDefaultScheduleDate(clock, holidayCalendar)
+        val defaultIndex = options.indexOf(defaultDate).takeIf { it >= 0 } ?: 0
+        _uiState.update {
+            it.copy(
+                celular = "",
+                nombre = "",
+                montoPP = "",
+                tasaPP = "",
+                deuda = "",
+                montoCD = "",
+                tasaCD = "",
+                comentarios = "",
+                dictationText = "",
+                dateOptions = options,
+                selectedDateIndex = defaultIndex,
+                hour = AddClientUiState.DEFAULT_HOUR,
+                minute = AddClientUiState.DEFAULT_MINUTE,
+                isAm = true
+            )
+        }
     }
 
     fun onDateSelected(index: Int) {

@@ -17,6 +17,7 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.defaultMinSize
 import androidx.compose.foundation.layout.fillMaxSize
@@ -134,7 +135,14 @@ fun AddClientRoute(
                     }
                 }
 
-                override fun onPartialResults(partialResults: Bundle?) = Unit
+                override fun onPartialResults(partialResults: Bundle?) {
+                    val partial = partialResults
+                        ?.getStringArrayList(SpeechRecognizer.RESULTS_RECOGNITION)
+                        ?.firstOrNull()
+                    if (!partial.isNullOrBlank()) {
+                        viewModel.onDictation(partial)
+                    }
+                }
 
                 override fun onEvent(eventType: Int, params: Bundle?) = Unit
                 })
@@ -148,6 +156,7 @@ fun AddClientRoute(
             putExtra(RecognizerIntent.EXTRA_LANGUAGE_MODEL, RecognizerIntent.LANGUAGE_MODEL_FREE_FORM)
             putExtra(RecognizerIntent.EXTRA_LANGUAGE, Locale.getDefault())
             putExtra(RecognizerIntent.EXTRA_PROMPT, context.getString(R.string.add_client_title))
+            putExtra(RecognizerIntent.EXTRA_PARTIAL_RESULTS, true)
         }
     }
     val lifecycleOwner = LocalLifecycleOwner.current
@@ -224,6 +233,7 @@ fun AddClientRoute(
         return when (val result = viewModel.saveCurrentClient()) {
             is SaveResult.Success -> {
                 Toast.makeText(context, R.string.schedule_saved_message, Toast.LENGTH_SHORT).show()
+                viewModel.resetForm()
                 true
             }
 
@@ -236,17 +246,11 @@ fun AddClientRoute(
     }
 
     val isMicEnabled = speechAvailable && speechRecognizer != null
-    val listeningHint = if (!isMicEnabled) {
-        context.getString(R.string.no_speech_recognizer)
-    } else {
-        null
-    }
 
     AddClientScreen(
         state = state,
         isMicEnabled = isMicEnabled,
         isListening = isListening,
-        listeningMessage = listeningHint,
         onMicClick = { handleMicClick() },
         onCelularChange = viewModel::updateCelular,
         onNombreChange = viewModel::updateNombre,
@@ -294,7 +298,6 @@ fun AddClientScreen(
     state: AddClientUiState,
     isMicEnabled: Boolean,
     isListening: Boolean,
-    listeningMessage: String? = null,
     onMicClick: () -> Unit,
     onCelularChange: (String) -> Unit,
     onNombreChange: (String) -> Unit,
@@ -313,7 +316,6 @@ fun AddClientScreen(
     modifier: Modifier = Modifier
 ) {
     val scrollState = rememberScrollState()
-    val displayListeningMessage = listeningMessage ?: stringResource(R.string.listening_message)
     Column(
         modifier
             .fillMaxSize()
@@ -361,15 +363,9 @@ fun AddClientScreen(
                 }
             }
         }
-        Spacer(modifier = Modifier.height(12.dp))
-        Text(
-            text = displayListeningMessage,
-            style = MaterialTheme.typography.bodyMedium,
-            modifier = Modifier.fillMaxWidth(),
-            textAlign = TextAlign.Center,
-            color = if (isListening) ActionColor else TextColor
-        )
         Spacer(modifier = Modifier.height(32.dp))
+        DictationPreview(text = state.dictationText)
+        Spacer(modifier = Modifier.height(24.dp))
         BlockFields(
             state = state,
             onCelularChange = onCelularChange,
@@ -405,6 +401,33 @@ fun AddClientScreen(
             )
         }
         Spacer(modifier = Modifier.height(32.dp))
+    }
+}
+
+@Composable
+private fun DictationPreview(text: String, modifier: Modifier = Modifier) {
+    Column(modifier = modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+        Text(
+            text = stringResource(id = R.string.dictation_preview_label),
+            style = MaterialTheme.typography.bodyMedium.copy(color = TextColor, fontWeight = FontWeight.Medium)
+        )
+        Surface(
+            shape = RoundedCornerShape(12.dp),
+            color = FieldBackground,
+            tonalElevation = 0.dp,
+            modifier = Modifier
+                .fillMaxWidth()
+                .shadow(6.dp, RoundedCornerShape(12.dp))
+        ) {
+            Text(
+                text = text.ifBlank { stringResource(id = R.string.dictation_preview_placeholder) },
+                style = MaterialTheme.typography.bodyMedium.copy(color = TextColor),
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .defaultMinSize(minHeight = 96.dp)
+                    .padding(horizontal = 16.dp, vertical = 14.dp)
+            )
+        }
     }
 }
 
@@ -587,14 +610,29 @@ private fun TimePicker(
             onValueChange = onHourChange,
             modifier = Modifier.weight(1f)
         )
-        AndroidNumberPicker(
-            minValue = 0,
-            maxValue = 59,
-            value = minute.coerceIn(0, 59),
-            displayedValues = (0..59).map { String.format(Locale.getDefault(), "%02d", it) }.toTypedArray(),
-            onValueChange = onMinuteChange,
-            modifier = Modifier.weight(1f)
-        )
+        Column(
+            modifier = Modifier.weight(1f),
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.spacedBy(8.dp)
+        ) {
+            OutlinedButton(
+                onClick = {
+                    val newMinute = if (minute == 30) 0 else 30
+                    onMinuteChange(newMinute)
+                },
+                contentPadding = PaddingValues(horizontal = 12.dp, vertical = 6.dp)
+            ) {
+                Text(text = stringResource(id = R.string.minute_toggle_button))
+            }
+            AndroidNumberPicker(
+                minValue = 0,
+                maxValue = 59,
+                value = minute.coerceIn(0, 59),
+                displayedValues = (0..59).map { String.format(Locale.getDefault(), "%02d", it) }.toTypedArray(),
+                onValueChange = onMinuteChange,
+                modifier = Modifier.fillMaxWidth()
+            )
+        }
         AndroidNumberPicker(
             minValue = 0,
             maxValue = 1,

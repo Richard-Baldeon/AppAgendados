@@ -22,7 +22,7 @@
             android:turnScreenOn="true" />
 
         <activity
-            android:name=".addclient.AddClientActivity"
+            android:name=".home.HomeActivity"
             android:exported="true"
             android:configChanges="keyboard|keyboardHidden|orientation|screenSize|uiMode"
             android:screenOrientation="portrait">
@@ -34,7 +34,37 @@
         </activity>
 
         <activity
-            android:name=".home.HomeActivity"
+            android:name=".addclient.AddClientActivity"
+            android:exported="false"
+            android:configChanges="keyboard|keyboardHidden|orientation|screenSize|uiMode"
+            android:screenOrientation="portrait" />
+
+        <activity
+            android:name=".iterate.IterateActivity"
+            android:exported="false"
+            android:configChanges="keyboard|keyboardHidden|orientation|screenSize|uiMode"
+            android:screenOrientation="portrait" />
+
+        <activity
+            android:name=".iterate.ClientDetailActivity"
+            android:exported="false"
+            android:configChanges="keyboard|keyboardHidden|orientation|screenSize|uiMode"
+            android:screenOrientation="portrait" />
+
+        <activity
+            android:name=".records.RecordsActivity"
+            android:exported="false"
+            android:configChanges="keyboard|keyboardHidden|orientation|screenSize|uiMode"
+            android:screenOrientation="portrait" />
+
+        <activity
+            android:name=".delete.DeleteClientActivity"
+            android:exported="false"
+            android:configChanges="keyboard|keyboardHidden|orientation|screenSize|uiMode"
+            android:screenOrientation="portrait" />
+
+        <activity
+            android:name=".events.UpcomingEventsActivity"
             android:exported="false"
             android:configChanges="keyboard|keyboardHidden|orientation|screenSize|uiMode"
             android:screenOrientation="portrait" />

@@ -14,7 +14,7 @@ data class AddClientUiState(
     val montoCD: String = "",
     val tasaCD: String = "",
     val comentarios: String = "",
-    val dictationText: String? = null,
+    val dictationText: String = "",
     val dateOptions: List<LocalDate> = emptyList(),
     val selectedDateIndex: Int = 0,
     val hour: Int = DEFAULT_HOUR,
