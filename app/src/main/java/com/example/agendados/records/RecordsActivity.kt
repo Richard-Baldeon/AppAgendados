@@ -38,8 +38,6 @@ import com.example.agendados.home.HomeActivity
 import com.example.agendados.iterate.ClientDetailActivity
 import com.example.agendados.ui.components.HomeNavigationButton
 import com.example.agendados.ui.theme.AgendadosTheme
-import java.time.Instant
-import java.time.ZoneId
 import java.time.format.DateTimeFormatter
 import java.util.Locale
 
@@ -84,8 +82,8 @@ fun RecordsScreen(
     modifier: Modifier = Modifier
 ) {
     Surface(color = MaterialTheme.colorScheme.background, modifier = modifier.fillMaxSize()) {
-    val dateFormatter = rememberRecordsDateFormatter()
-    val timeFormatter = rememberRecordsTimeFormatter()
+        val dateFormatter = rememberRecordsDateFormatter()
+        val timeFormatter = rememberRecordsTimeFormatter()
         Column(
             modifier = Modifier
                 .fillMaxSize()
@@ -156,9 +154,6 @@ private fun RecordListItem(
                 .padding(horizontal = 20.dp, vertical = 16.dp),
             verticalArrangement = Arrangement.spacedBy(6.dp)
         ) {
-            val createdAt = remember(record.createdAtMillis) {
-                Instant.ofEpochMilli(record.createdAtMillis).atZone(ZoneId.systemDefault())
-            }
             Text(
                 text = record.nombre.ifBlank { stringResource(id = R.string.client_detail_unknown_name) },
                 style = MaterialTheme.typography.titleMedium,
@@ -173,22 +168,6 @@ private fun RecordListItem(
                     id = R.string.records_schedule,
                     record.scheduledDate.format(dateFormatter),
                     record.scheduledTime.format(timeFormatter)
-                ),
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant
-            )
-            Text(
-                text = stringResource(
-                    id = R.string.records_created_date,
-                    createdAt.format(dateFormatter)
-                ),
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant
-            )
-            Text(
-                text = stringResource(
-                    id = R.string.records_created_time,
-                    createdAt.format(timeFormatter)
                 ),
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant

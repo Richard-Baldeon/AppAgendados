@@ -110,21 +110,13 @@ private fun ClientDetailScreen(
                     textAlign = TextAlign.Center,
                     modifier = Modifier.fillMaxWidth()
                 )
-                if (record == null) {
-                    Text(
-                        text = stringResource(id = R.string.client_detail_not_found),
-                        style = MaterialTheme.typography.bodyMedium,
-                        textAlign = TextAlign.Center,
-                        modifier = Modifier.fillMaxWidth()
-                    )
-                } else {
-                    ClientDetailCard(
-                        record = record,
-                        dateFormatter = dateFormatter,
-                        timeFormatter = timeFormatter,
-                        modifier = Modifier.fillMaxWidth()
-                    )
-                }
+            } else {
+                ClientDetailCard(
+                    record = record,
+                    onCallClick = onCallClick,
+                    dateFormatter = dateFormatter,
+                    timeFormatter = timeFormatter
+                )
             }
             if (record != null && record.celular.isNotBlank()) {
                 FloatingActionButton(
@@ -207,28 +199,67 @@ fun ClientDetailCard(
 }
 
 @Composable
-private fun DetailField(label: String, value: String, allowMultiline: Boolean = false) {
-    Column(verticalArrangement = Arrangement.spacedBy(6.dp), modifier = Modifier.fillMaxWidth()) {
-        Text(
-            text = label,
-            style = MaterialTheme.typography.labelLarge,
-            fontWeight = FontWeight.SemiBold,
-            color = MaterialTheme.colorScheme.onSurfaceVariant
+fun ClientDetailCard(
+    record: ClientRecord,
+    onCallClick: (String) -> Unit,
+    dateFormatter: DateTimeFormatter = rememberDetailDateFormatter(),
+    timeFormatter: DateTimeFormatter = rememberDetailTimeFormatter(),
+    modifier: Modifier = Modifier
+) {
+    Column(modifier = modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(12.dp)) {
+        DetailTextRow(
+            label = stringResource(id = R.string.client_detail_phone_label),
+            value = formatPhoneNumber(record.celular)
         )
-        Surface(
-            shape = RoundedCornerShape(16.dp),
-            color = MaterialTheme.colorScheme.surfaceVariant,
-            tonalElevation = 0.dp
-        ) {
-            Text(
-                text = value,
-                style = MaterialTheme.typography.bodyLarge,
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(horizontal = 16.dp, vertical = if (allowMultiline) 16.dp else 12.dp),
-                fontWeight = FontWeight.Medium
+        DetailTextRow(
+            label = stringResource(id = R.string.client_detail_schedule_label),
+            value = stringResource(
+                id = R.string.client_detail_schedule,
+                record.scheduledDate.format(dateFormatter),
+                record.scheduledTime.format(timeFormatter)
             )
+        )
+        DetailTextRow(
+            label = stringResource(id = R.string.client_detail_amount_pp_label),
+            value = record.montoPP.ifBlank { stringResource(id = R.string.client_detail_placeholder) }
+        )
+        DetailTextRow(
+            label = stringResource(id = R.string.client_detail_rate_pp_label),
+            value = record.tasaPP.ifBlank { stringResource(id = R.string.client_detail_placeholder) }
+        )
+        DetailTextRow(
+            label = stringResource(id = R.string.client_detail_debt_label),
+            value = record.deuda.ifBlank { stringResource(id = R.string.client_detail_placeholder) }
+        )
+        DetailTextRow(
+            label = stringResource(id = R.string.client_detail_amount_cd_label),
+            value = record.montoCD.ifBlank { stringResource(id = R.string.client_detail_placeholder) }
+        )
+        DetailTextRow(
+            label = stringResource(id = R.string.client_detail_rate_cd_label),
+            value = record.tasaCD.ifBlank { stringResource(id = R.string.client_detail_placeholder) }
+        )
+        Text(
+            text = stringResource(id = R.string.client_detail_comments_label),
+            style = MaterialTheme.typography.titleSmall,
+            fontWeight = FontWeight.SemiBold
+        )
+        Text(
+            text = record.comentarios.ifBlank { stringResource(id = R.string.client_detail_no_comments) },
+            style = MaterialTheme.typography.bodyMedium
+        )
+        Spacer(modifier = Modifier.height(12.dp))
+        Button(onClick = { onCallClick(record.celular) }, modifier = Modifier.fillMaxWidth()) {
+            Text(text = stringResource(id = R.string.call_button), fontWeight = FontWeight.Bold)
         }
+    }
+}
+
+@Composable
+private fun DetailTextRow(label: String, value: String) {
+    Column(verticalArrangement = Arrangement.spacedBy(4.dp), modifier = Modifier.fillMaxWidth()) {
+        Text(text = label, style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.SemiBold)
+        Text(text = value, style = MaterialTheme.typography.bodyMedium)
     }
 }
 

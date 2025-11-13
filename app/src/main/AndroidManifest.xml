@@ -70,6 +70,24 @@
             android:screenOrientation="portrait" />
 
         <activity
+            android:name=".iterate.IterateActivity"
+            android:exported="false"
+            android:configChanges="keyboard|keyboardHidden|orientation|screenSize|uiMode"
+            android:screenOrientation="portrait" />
+
+        <activity
+            android:name=".iterate.ClientDetailActivity"
+            android:exported="false"
+            android:configChanges="keyboard|keyboardHidden|orientation|screenSize|uiMode"
+            android:screenOrientation="portrait" />
+
+        <activity
+            android:name=".records.RecordsActivity"
+            android:exported="false"
+            android:configChanges="keyboard|keyboardHidden|orientation|screenSize|uiMode"
+            android:screenOrientation="portrait" />
+
+        <activity
             android:name=".MainActivity"
             android:exported="false"
             android:launchMode="singleTop"
