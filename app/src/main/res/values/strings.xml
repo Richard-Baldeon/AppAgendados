@@ -44,6 +44,9 @@
     <string name="home_option_ticket">Generar ticket</string>
     <string name="home_option_pending">Próximamente disponible</string>
     <string name="home_option_coming_soon">La opción %1$s estará disponible pronto.</string>
+    <string name="home_option_records">Registros</string>
+    <string name="home_option_records_description">Consulta todos los clientes guardados.</string>
+    <string name="home_no_clients_message">Aún no tienes clientes registrados.</string>
     <string name="field_celular">Celular</string>
     <string name="field_nombre">Nombre</string>
     <string name="field_monto_pp">Monto PP</string>
@@ -66,6 +69,8 @@
     <string name="home_button_content_description">Ir a Inicio</string>
     <string name="home_button_label">Inicio</string>
     <string name="listening_message">Toca el micrófono para dictar los datos del cliente.</string>
+    <string name="dictation_preview_label">Dictado en tiempo real</string>
+    <string name="dictation_preview_placeholder">El texto dictado aparecerá aquí.</string>
     <string name="speech_no_text_captured">No se reconoció ningún texto. Intenta nuevamente.</string>
     <string name="speech_error_audio">Hubo un problema con el audio.</string>
     <string name="speech_error_client">No se pudo iniciar el reconocimiento de voz.</string>
@@ -93,8 +98,14 @@
     <string name="client_detail_no_comments">Sin comentarios adicionales.</string>
     <string name="client_detail_unknown_name">Sin nombre</string>
     <string name="iterate_title">Iterar cartera</string>
-    <string name="iterate_subtitle">Revisa la lista de clientes registrados.</string>
-    <string name="iterate_empty_message">No tienes clientes registrados todavía.</string>
-    <string name="iterate_phone">Teléfono: %1$s</string>
-    <string name="iterate_schedule">Agendado para %1$s a las %2$s</string>
+    <string name="iterate_subtitle">Recorre tu cartera cliente por cliente.</string>
+    <string name="iterate_empty_message">Aún no tienes clientes registrados.</string>
+    <string name="iterate_previous_button">Anterior</string>
+    <string name="iterate_next_button">Siguiente</string>
+    <string name="iterate_position_indicator">Cliente %1$d de %2$d</string>
+    <string name="records_title">Registros</string>
+    <string name="records_subtitle">Lista completa de clientes registrados.</string>
+    <string name="records_empty_message">Aún no tienes clientes registrados.</string>
+    <string name="records_phone">Celular: %1$s</string>
+    <string name="records_schedule">Agendado para %1$s a las %2$s</string>
 </resources>

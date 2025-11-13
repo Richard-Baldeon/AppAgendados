@@ -113,52 +113,70 @@ private fun ClientDetailScreen(
                     modifier = Modifier.fillMaxWidth()
                 )
             } else {
-                DetailTextRow(
-                    label = stringResource(id = R.string.client_detail_phone_label),
-                    value = formatPhoneNumber(record.celular)
+                ClientDetailCard(
+                    record = record,
+                    onCallClick = onCallClick,
+                    dateFormatter = dateFormatter,
+                    timeFormatter = timeFormatter
                 )
-                DetailTextRow(
-                    label = stringResource(id = R.string.client_detail_schedule_label),
-                    value = stringResource(
-                        id = R.string.client_detail_schedule,
-                        record.scheduledDate.format(dateFormatter),
-                        record.scheduledTime.format(timeFormatter)
-                    )
-                )
-                DetailTextRow(
-                    label = stringResource(id = R.string.client_detail_amount_pp_label),
-                    value = record.montoPP.ifBlank { stringResource(id = R.string.client_detail_placeholder) }
-                )
-                DetailTextRow(
-                    label = stringResource(id = R.string.client_detail_rate_pp_label),
-                    value = record.tasaPP.ifBlank { stringResource(id = R.string.client_detail_placeholder) }
-                )
-                DetailTextRow(
-                    label = stringResource(id = R.string.client_detail_debt_label),
-                    value = record.deuda.ifBlank { stringResource(id = R.string.client_detail_placeholder) }
-                )
-                DetailTextRow(
-                    label = stringResource(id = R.string.client_detail_amount_cd_label),
-                    value = record.montoCD.ifBlank { stringResource(id = R.string.client_detail_placeholder) }
-                )
-                DetailTextRow(
-                    label = stringResource(id = R.string.client_detail_rate_cd_label),
-                    value = record.tasaCD.ifBlank { stringResource(id = R.string.client_detail_placeholder) }
-                )
-                Text(
-                    text = stringResource(id = R.string.client_detail_comments_label),
-                    style = MaterialTheme.typography.titleSmall,
-                    fontWeight = FontWeight.SemiBold
-                )
-                Text(
-                    text = record.comentarios.ifBlank { stringResource(id = R.string.client_detail_no_comments) },
-                    style = MaterialTheme.typography.bodyMedium
-                )
-                Spacer(modifier = Modifier.height(12.dp))
-                Button(onClick = { onCallClick(record.celular) }, modifier = Modifier.fillMaxWidth()) {
-                    Text(text = stringResource(id = R.string.call_button), fontWeight = FontWeight.Bold)
-                }
             }
+        }
+    }
+}
+
+@Composable
+fun ClientDetailCard(
+    record: ClientRecord,
+    onCallClick: (String) -> Unit,
+    dateFormatter: DateTimeFormatter = rememberDetailDateFormatter(),
+    timeFormatter: DateTimeFormatter = rememberDetailTimeFormatter(),
+    modifier: Modifier = Modifier
+) {
+    Column(modifier = modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(12.dp)) {
+        DetailTextRow(
+            label = stringResource(id = R.string.client_detail_phone_label),
+            value = formatPhoneNumber(record.celular)
+        )
+        DetailTextRow(
+            label = stringResource(id = R.string.client_detail_schedule_label),
+            value = stringResource(
+                id = R.string.client_detail_schedule,
+                record.scheduledDate.format(dateFormatter),
+                record.scheduledTime.format(timeFormatter)
+            )
+        )
+        DetailTextRow(
+            label = stringResource(id = R.string.client_detail_amount_pp_label),
+            value = record.montoPP.ifBlank { stringResource(id = R.string.client_detail_placeholder) }
+        )
+        DetailTextRow(
+            label = stringResource(id = R.string.client_detail_rate_pp_label),
+            value = record.tasaPP.ifBlank { stringResource(id = R.string.client_detail_placeholder) }
+        )
+        DetailTextRow(
+            label = stringResource(id = R.string.client_detail_debt_label),
+            value = record.deuda.ifBlank { stringResource(id = R.string.client_detail_placeholder) }
+        )
+        DetailTextRow(
+            label = stringResource(id = R.string.client_detail_amount_cd_label),
+            value = record.montoCD.ifBlank { stringResource(id = R.string.client_detail_placeholder) }
+        )
+        DetailTextRow(
+            label = stringResource(id = R.string.client_detail_rate_cd_label),
+            value = record.tasaCD.ifBlank { stringResource(id = R.string.client_detail_placeholder) }
+        )
+        Text(
+            text = stringResource(id = R.string.client_detail_comments_label),
+            style = MaterialTheme.typography.titleSmall,
+            fontWeight = FontWeight.SemiBold
+        )
+        Text(
+            text = record.comentarios.ifBlank { stringResource(id = R.string.client_detail_no_comments) },
+            style = MaterialTheme.typography.bodyMedium
+        )
+        Spacer(modifier = Modifier.height(12.dp))
+        Button(onClick = { onCallClick(record.celular) }, modifier = Modifier.fillMaxWidth()) {
+            Text(text = stringResource(id = R.string.call_button), fontWeight = FontWeight.Bold)
         }
     }
 }
